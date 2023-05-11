@@ -15,11 +15,15 @@ class Agent():
         action - action to perform
         """
 
-    def update(self):
+    def update(self, states, actions, rewards):
         """ Update policy and value functions based on a set of observations.
+
+        minq Eq[cθ(τ )] − H(τ ) 
 
         Inputs:
         states - sequence of observed states
         actions - sequence of performed actions
         rewards - sequence of rewards from the performed actions
         """
+        entropy = forward(states) * log(forward(states))
+        minimize(rewards - entropy)
