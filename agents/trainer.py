@@ -7,7 +7,7 @@ class Trainer():
 
     def __init__(self, params):
         """ Create the gym enviroment and agent. """
-        self.env = Env()
+        self.env = ControlEnv()
         self.agent = Agent()
         self.cost = Cost()
 
