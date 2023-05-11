@@ -1,3 +1,5 @@
+from utils.batch import Batch
+
 class Agent():
     """ Agent class that gives actions based on current state. """
 
@@ -37,10 +39,9 @@ class Agent():
         max_states_per_trajectory - max timesteps for a single rollout
 
         Outputs:
-        states - a list of all states visited
-        actions - a list of the action at each state visited
+        batch - batch containing the rewards, states, and actions
         """
-        states, actions = [], []
+        rewards, states, actions = [], [], []
         states_visited = 0
         while states_visited < max_states:
             state = env.reset()
@@ -51,7 +52,8 @@ class Agent():
                 actions.append(action)
 
                 state, reward, done = env.step(action)
+                rewards.append(reward) # These will be meaningless since we don't model the reward directly, instead estimate later with cost function
                 if done:
                     break
 
-        return states, actions
+        return Batch(states=states, actions=actions)
