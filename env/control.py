@@ -14,6 +14,7 @@ class ControlEnv:
         reward - reward from the prior action
         done - is episode complete
         """
+        return observation, reward, done
 
     def reset(self):
         """ Reset the enviroment.

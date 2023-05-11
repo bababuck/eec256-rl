@@ -12,9 +12,13 @@ class Batch:
             self.probs = np.array(probs)
             self.actions = np.array(actions)
 
-    def sample(self):
-        idx = np.random.choice(len(states), DEMO_BATCH)
-        return np.concatenate((states, probs, actions), axis=1)[idx]
+    def sample(self, count):
+        idx = np.random.choice(len(states), count)
+        sampled_batch = Batch()
+        sampled_batch.states = states[idx]
+        sampled_batch.probs = probs[idx]
+        sampled_batch.actions = actions[idx]
+        return sampled_batch
 
     def extend(self, other):
         """ Combine with a second batch.

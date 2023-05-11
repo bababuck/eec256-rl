@@ -1,7 +1,8 @@
 class Cost(nn.module):
 
-    def __init__(self):
+    def __init__(self, action_size, state_size, n_layers):
         super(PolicyNetwork, self).__init__()
+        self.optimizer = torch.optim.Adam(self.parameters())
 
     def non_linear_ioc(self, d_demo, d_samp):
         """ Non-linear IOC with stochastic patterns.
@@ -10,14 +11,29 @@ class Cost(nn.module):
         """
         for iter in range(K):
             # Sample demonstration batch Dˆdemo ⊂ Ddemo
-            demo_sample = d_demo.sample()
+            d_s_demo = d_demo.sample()
             # Sample background batch Dˆsamp ⊂ Dsamp
-            samp_sample = d_samp.sample()
+            d_s_samp = d_samp.sample()
             # Append demonstration batch to background batch:
             # Dˆsamp ← Dˆdemo ∪ Dˆsamp
-            data = demo_sample + samp_sample
+            d_s_samp.extend(d_s_demo)
             # Estimate dLIOC dθ (θ) using Dˆdemo and Dˆsamp
-            ioc_like = avg(forward(demo_sample)) + log (avg(exp(forward(data))/probs))
+            samp_states = torch.tensor(d_s_samp.states)
+            samp_probs = torch.tensor(d_s_samp.probs)
+            demo_states = torch.tensor(d_s_demo.states)
+
+            # z = [1/k * Sigma_k(qκ(τ))]^-1 -> samp_probs
+            # L_ioc = 1/N * Sigma_demo(cost(τ)) + log( 1/M * Sigma_samp(z * exp(-cost(τ)) ) )
+            samp_costs = self.get_cost(samp_states)
+            demo_costs = self.get_cost(demo_states)
+            ioc_lik = torch.mean( demo_costs ) + torch.log( torch.mean( torch.exp( samp_cost ) / samp_probs ) )
             # Update parameters θ using gradient dLIOC dθ (θ)
-            ioc_like.backwards()
-        # return optimized cost parameters θ
+            self.optimizer.zero_grad()
+            ioc_lik.backwards()
+            self.optimizer.step()
+
+    def get_cost(x):
+        return forward(x)
+
+    def forward(x):
+        
