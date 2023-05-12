@@ -7,8 +7,8 @@ class Agent(nn.module):
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
         """ Init network and optimizer. """
         super(Agent, self).__init__()
-        self.optimizer = torch.optim.Adam(self.parameters())
         self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
+        self.optimizer = torch.optim.Adam(self.net.parameters())
 
     def get_action(self, state, training):
         """ Return an action based on the current state.
@@ -22,17 +22,15 @@ class Agent(nn.module):
         probs - probability of each_action
         """
         if training:
-            self.net.forward(states)
-            probs = torch.softmax(states)
-            action = torch.argmax(logits)
+            logits = self.net.forward(states)
         else:
-            logits = self.net.forward(states).detach().numpy()
-            probs = nn.functional.softmax(logits)
-            action = np.argmax(logits)
+            logits = self.net.forward(states).detach()
 
+        probs = torch.softmax(logits)
+        action = torch.argmax(logits)
         return action, probs
 
-    def update(self, states, actions, rewards):
+    def update(self, states, actions, rewards, probs):
         """ Update policy and value functions based on a set of observations.
 
         minq Eq[cθ(τ)] − H(τ)
@@ -41,9 +39,14 @@ class Agent(nn.module):
         states - sequence of observed states
         actions - sequence of performed actions
         rewards - sequence of rewards from the performed actions
+        probs - the probability of each action
         """
-        entropy = forward(states) * log(forward(states))
-        minimize(rewards - entropy)
+        
+        entropy = probs * torch.log(probs)
+        loss = entropy - rewards
+        optimizer.zero_grad()
+        self.loss.backward()
+        self.optimizer.step()
 
     def generate_samples(self, env, max_states, max_states_per_trajectory):
         """ Generate a set of sample trajectories from the enviroment.
