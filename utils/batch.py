@@ -1,16 +1,17 @@
 import numpy as np
+import pytorch as torch
 
 class Batch:
     def __init__(self, load_file=None, states=[], probs=[], actions=[]):
         if load_file:
             loaded_data = np.load(load_file)
-            self.states = loaded_data[0]
-            self.probs = loaded_data[1]
-            self.actions = loaded_data[2]
+            self.states = torch.tensor(loaded_data[0])
+            self.probs = torch.tensor(loaded_data[1])
+            self.actions = torch.tensor(loaded_data[2])
         else:
-            self.states = np.array(states)
-            self.probs = np.array(probs)
-            self.actions = np.array(actions)
+            self.states = torch.tensor(states)
+            self.probs = torch.tensor(probs)
+            self.actions = torch.tensor(actions)
 
     def sample(self, count):
         idx = np.random.choice(len(states), count)
@@ -26,6 +27,6 @@ class Batch:
         Inputs:
         other - another batch type object
         """
-        self.states = np.concatenate(self.states, other.states, axis=1)
-        self.probs = np.concatenate(self.probs, other.probs, axis=1)
-        self.actions = np.concatenate(self.actions, other.actions, axis=1)
+        self.states = torch.cat(self.states, other.states, axis=1)
+        self.probs = torch.cat(self.probs, other.probs, axis=1)
+        self.actions = torch.cat(self.actions, other.actions, axis=1)
