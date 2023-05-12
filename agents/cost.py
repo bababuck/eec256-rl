@@ -1,8 +1,14 @@
 class Cost(nn.module):
 
-    def __init__(self, action_size, state_size, n_layers):
+    def __init__(self, action_size, state_size, layers_size, hidden_layers):
         super(PolicyNetwork, self).__init__()
         self.optimizer = torch.optim.Adam(self.parameters())
+
+        # https://discuss.pytorch.org/t/when-should-i-use-nn-modulelist-and-when-should-i-use-nn-sequential/5463
+        layers = [nn.Linear(state_size, layers_size), nn.ReLU()]
+        layers += [*x for x in [nn.Linear(layers_size, layers_size), nn.ReLU()] for _ in range(self(hidden_layers)]
+        layers.append(nn.Linear(layers_size, action_size))
+        self.net = nn.Sequential(*layers)
 
     def non_linear_ioc(self, d_demo, d_samp):
         """ Non-linear IOC with stochastic patterns.
@@ -35,5 +41,8 @@ class Cost(nn.module):
     def get_cost(x):
         return forward(x)
 
-    def forward(x):
+    def forward(self, x):
+        # ModuleList can act as an iterable, or be indexed using ints
+        return self.net.forward(x)
+
         
