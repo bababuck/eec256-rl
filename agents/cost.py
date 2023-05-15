@@ -42,4 +42,6 @@ class Cost(nn.module):
         # ModuleList can act as an iterable, or be indexed using ints
         return self.net.forward(x)
 
-        
+    def save(self, path):
+        """ Save the model"""
+        torch.save(self.state_dict(), path)

@@ -79,3 +79,7 @@ class Agent(nn.module):
 
     def forward(self, x):
          return self.net.forward(x)
+
+    def save(self, path):
+        """ Save the model"""
+        torch.save(self.state_dict(), path)
