@@ -3,7 +3,16 @@ rope_xml = """
 <mujoco model="rope">
     <compiler angle="radian"/>
     <size njmax="500" nconmax="100"/>
+    <asset>
+        <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+        <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+        <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+        <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="30 30" texture="texplane"/>
+        <material name="geom" texture="texgeom" texuniform="true"/>
+    </asset>
     <worldbody>
+        <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
+        <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="0 0 -1" rgba="0.8 0.9 0.8 1" size="1 1 0.1" type="plane"/>
         <body name="CB0" pos="-0.2 0 0">
         <inertial pos="0 0 0.01" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
             <geom name="CG0" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
