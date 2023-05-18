@@ -1,24 +1,30 @@
+
 import numpy as np
-import pytorch as torch
+import torch
+import random
 
 class Batch:
     def __init__(self, load_file=None, states=[], probs=[], actions=[]):
         if load_file:
-            loaded_data = np.load(load_file)
-            self.states = torch.tensor(loaded_data[0])
-            self.probs = torch.tensor(loaded_data[1])
-            self.actions = torch.tensor(loaded_data[2])
+            self.states, self.actions = self.load_file(load_file)
+            self.probs = np.ones((np.shape(self.states)[0], 1))
         else:
-            self.states = torch.tensor(states)
-            self.probs = torch.tensor(probs)
-            self.actions = torch.tensor(actions)
+            self.actions = np.array(actions)
+            if actions == []:
+                self.states = np.zeros((0, 4))
+                self.probs = np.zeros((0,1))
+            else:
+                self.states = np.array(states)
+                self.probs = np.array(probs).reshape(-1,1)
+        self.states = np.concatenate((self.states, self.actions[:, None]), axis=1)
 
     def sample(self, count):
-        idx = np.random.choice(len(states), count)
         sampled_batch = Batch()
-        sampled_batch.states = states[idx]
-        sampled_batch.probs = probs[idx]
-        sampled_batch.actions = actions[idx]
+        if (len(self.states)):
+            idx = np.random.choice(len(self.states), count)
+            sampled_batch.states = self.states[idx]
+            sampled_batch.probs = self.probs[idx]
+            sampled_batch.actions = self.actions[idx]
         return sampled_batch
 
     def extend(self, other):
@@ -27,6 +33,20 @@ class Batch:
         Inputs:
         other - another batch type object
         """
-        self.states = torch.cat(self.states, other.states, axis=1)
-        self.probs = torch.cat(self.probs, other.probs, axis=1)
-        self.actions = torch.cat(self.actions, other.actions, axis=1)
+        self.states = np.concatenate((self.states, other.states), axis=0)
+        self.probs = np.concatenate((self.probs, other.probs), axis=0)
+        self.actions = np.concatenate((self.actions, other.actions), axis=0)
+
+    def load_file(self, filename, max_obs=None):
+        loaded_data = np.load(filename, allow_pickle=True)
+        states = np.zeros((0, 4))
+        actions = np.array([])
+        for ob in loaded_data:
+            if 1000 != np.shape(ob[0])[0]:
+                continue
+            states = np.concatenate((states, np.array(ob[0])), axis=0)
+            actions = np.concatenate((actions, np.array(ob[1])), axis=0)
+            obs = np.shape(states)[0]
+            if max_obs != None and obs > max_obs:
+                break
+        return states, actions.astype(int)

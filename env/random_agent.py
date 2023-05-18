@@ -1,4 +1,3 @@
-import Agent from agent
 import random
 
 class RandomAgent():
@@ -16,7 +15,7 @@ class RandomAgent():
         Outputs:
         action - action to perform
         """
-        return get_random_action(self)
+        return self.get_random_action()
 
     def get_random_action(self):
         """ Return a random aciton. """
