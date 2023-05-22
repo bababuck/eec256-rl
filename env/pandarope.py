@@ -21,6 +21,7 @@ mujoco_arena = TableArena()
 mujoco_arena.set_origin([0.8, 0, 0])
 world.merge(mujoco_arena)
 
+# ADD Rope here from xml file
 """
 from robosuite.models.objects import MujocoXMLObject
 from robosuite.utils.mjcf_utils import array_to_string, find_elements, xml_path_completion
