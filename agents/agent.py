@@ -91,16 +91,13 @@ class Agent():
             for i in range(max_states_per_trajectory):
                 states_visited += 1
                 state, reward, done = env.step(action)
-                if final:
-                    action, prob = self.get_action(torch.tensor(state), True)
-                else:
-                    action, prob = self.get_action(torch.tensor(state), False)
-                    c_states.append(state)
-                    c_actions.append(action)
-                    c_probs.append(prob.numpy()[action])
+                action, prob = self.get_action(torch.tensor(state), False)
+                c_states.append(state)
+                c_actions.append(action)
+                c_probs.append(prob.numpy()[action])
                     
-                    cost = [cost_net.get_cost(torch.tensor(state.tolist()+[0], dtype=torch.float32)).detach().item(), cost_net.get_cost(torch.tensor(state.tolist()+[1], dtype=torch.float32)).detach().item()]
-                    c_rewards.append(cost)
+                cost = [cost_net.get_cost(torch.tensor(state.tolist()+[0], dtype=torch.float32)).detach().item(), cost_net.get_cost(torch.tensor(state.tolist()+[1], dtype=torch.float32)).detach().item()]
+                c_rewards.append(cost)
                 if done:
                     break
 

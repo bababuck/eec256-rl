@@ -31,7 +31,6 @@ class Trainer():
             print(f"Iteration={i}")
 
             # Generate samples Dtraj from qk(τ )
-            _, _ = self.agent.generate_samples(self.env, 10000, max_states_per_traj, self.cost, True)
             d_traj, costs = self.agent.generate_samples(self.env, max_states, max_states_per_traj, self.cost)
 
             # Append samples: Dsamp ← Dsamp ∪ Dtraj
