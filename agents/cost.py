@@ -3,10 +3,12 @@ import torch
 import numpy as np
 
 class Cost():
+    """ Class for approximating the cost function. """
 
-    K = 10
+    K = 10 # Number of update steps to perform each iteration
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
+        """ Initialize the network and optimizer. """
         self.net = utils.generate_simple_network(state_size + 1, 1, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
@@ -41,11 +43,17 @@ class Cost():
             self.optimizer.step()
 
     def get_cost(self, x):
+        """ Get the cost of a given state-action pair. """
         return torch.sigmoid(self.forward(x))
 
     def forward(self, x):
+        """ Send data through the network. """
         return self.net.forward(x)
 
     def save(self, path):
-        """ Save the model"""
+        """ Save the model.
+
+        Inputs:
+        path - path to file to save network in
+        """
         torch.save(self.net.state_dict(), path)
