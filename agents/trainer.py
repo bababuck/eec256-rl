@@ -42,6 +42,7 @@ class Trainer():
             # Update qk(τ ) using Dtraj and the method from (Levine & Abbeel, 2014) to obtain qk+1(τ )
             states = torch.tensor(d_traj.states, dtype=torch.float32)
             self.agent.update(torch.tensor(d_traj.states, dtype=torch.float32), costs, None)
+            self.agent.test(env=self.env, num_test=3)
 
         # return optimized cost parameters θ and trajectory distribution q(τ)
 

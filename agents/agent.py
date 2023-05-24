@@ -108,6 +108,17 @@ class Agent():
 
         return Batch(states=states, actions=actions, probs=probs), rewards
 
+    def test(self, env, num_test):
+        for t in range(num_test):
+            steps = 0
+            done = False
+            state = env.reset()
+            while not done:
+                steps += 1
+                action, _ = self.get_action(torch.tensor(state), True)
+                state, _, done = env.step(action)
+            print(f"Test number {t}: {steps} steps reached")
+
     def forward(self, x):
          return self.net.forward(x)
 
