@@ -5,6 +5,9 @@ from env.control import ControlEnv
 
 if __name__ == '__main__':
     env = ControlEnv('CartPole-v1')
+    env.reset()
+    env.render()
+    env.close()
     action_size = env.action_space.n
     state_size = env.observation_space.shape[0]
     hidden_layer_size = 32

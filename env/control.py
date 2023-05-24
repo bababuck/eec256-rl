@@ -10,7 +10,7 @@ class ControlEnv():
         """
         Random agent will be used to randomly initialize the state.
         """
-        self.env = gym.make(env_name)
+        self.env = gym.make(env_name, render_mode = "human")
         if add_randomness:
             self.random_agent = RandomAgent(self.env.action_space.n)
         else:
@@ -50,3 +50,6 @@ class ControlEnv():
                 random_action = self.random_agent.get_action()
                 self.step(random_action)
         return observation
+
+    def render(self):
+        self.env.render()
