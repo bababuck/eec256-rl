@@ -13,7 +13,7 @@ if __name__ == '__main__':
     cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)
     trainer = Trainer(env, agent, cost)
     iterations = 400
-    trainer.train(iterations)
+    trainer.train(iterations, "expert_data/expert_cartpole.npy")
 
     networks_folder = "netowrks"
     trainer.save_networks(networks_folder)
