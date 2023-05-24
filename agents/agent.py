@@ -91,7 +91,7 @@ class Agent():
         loss.backward()
         self.optimizer.step()
 
-    def generate_samples(self, env, max_states, max_states_per_trajectory, cost_net):
+    def generate_samples(self, env, max_states, max_states_per_trajectory):
         """ Generate a set of sample trajectories from the enviroment.
 
         Inputs:
@@ -102,7 +102,7 @@ class Agent():
         Outputs:
         batch - batch containing the rewards, states, and actions
         """
-        costs, states, actions, probs = [], [], [], []
+        states, actions, probs = [], [], []
         states_visited = 0
         while states_visited < max_states:
             state = env.reset()
@@ -111,8 +111,6 @@ class Agent():
                 states.append(state)
                 actions.append(action)
                 probs.append(prob.numpy()[action])
-                cost = [cost_net.get_cost(torch.tensor(state.tolist()+[0], dtype=torch.float32)).detach().item(), cost_net.get_cost(torch.tensor(state.tolist()+[1], dtype=torch.float32)).detach().item()]
-                costs.append(cost)
 
                 states_visited += 1
                 state, reward, done = env.step(action)
@@ -121,7 +119,7 @@ class Agent():
                 if done:
                     break
 
-        return Batch(states=states, actions=actions, probs=probs), costs
+        return Batch(states=states, actions=actions, probs=probs)
 
     def test(self, env, num_test):
         """ Run a test of the model on the enviroment.
