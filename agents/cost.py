@@ -9,7 +9,7 @@ class Cost():
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
         """ Initialize the network and optimizer. """
-        self.net = utils.generate_simple_network(state_size + 1, 1, hidden_layer_size, hidden_layers)
+        self.net = utils.generate_simple_network(state_size + action_size, 1, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
     def non_linear_ioc(self, d_demo, d_samp):
