@@ -1,6 +1,3 @@
-[submodule "Gymnasium-Robotics"]
-	path = Gymnasium-Robotics
-	url = https://github.com/Farama-Foundation/Gymnasium-Robotics.git
 [submodule "Gymnasium-Robotics-Fork"]
 	path = Gymnasium-Robotics-Fork
 	url = https://github.com/bababuck/Gymnasium-Robotics-Fork.git
