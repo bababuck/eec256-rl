@@ -1,0 +1,83 @@
+<mujoco>
+  <compiler angle="radian" meshdir="./mesh" texturedir="./texture" />
+  <visual>
+    <quality shadowsize="8192" offsamples="8" numslices="64" numstacks="64" />
+    <headlight active="1" />
+    <rgba haze="0.15 0.25 0.35 1" />
+  </visual>
+  <option timestep="0.001" integrator="Euler" iterations="50" solver="Newton" impratio="5" noslip_iterations="5" tolerance="1e-8" cone="elliptic">
+    <flag actuation="enable" gravity="enable" warmstart="enable" />
+  </option>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512" />
+    <texture name="plane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8" />
+    <material name="plane" reflectance="0.3" texture="plane" texrepeat="1 1" texuniform="true" />
+  </asset>
+  <include file="robot.xml" /> 
+  <worldbody>
+    <body name="CB0" pos="0.2 0 0">
+            <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+            <geom name="CG0" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+            <body name="CB1" pos="0.04 0 0">
+                <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                <joint name="CJ0_1" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                <joint name="CJ1_1" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                <geom name="CG1" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                <body name="CB2" pos="0.04 0 0">
+                    <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                    <joint name="CJ0_2" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                    <joint name="CJ1_2" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                    <geom name="CG2" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                    <body name="CB3" pos="0.04 0 0">
+                        <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                        <joint name="CJ0_3" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                        <joint name="CJ1_3" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                        <geom name="CG3" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                        <body name="CB4" pos="0.04 0 0">
+                            <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                            <joint name="CJ0_4" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                            <joint name="CJ1_4" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                            <geom name="CG4" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                            <body name="CB5" pos="0.04 0 0">
+                                <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                                <joint name="CJ0_5" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                                <joint name="CJ1_5" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                                <geom name="CG5" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                                <body name="CB6" pos="0.04 0 0">
+                                    <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                                    <joint name="CJ0_6" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                                    <joint name="CJ1_6" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                                    <geom name="CG6" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                                    <body name="CB7" pos="0.04 0 0">
+                                        <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                                        <joint name="CJ0_7" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                                        <joint name="CJ1_7" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                                        <geom name="CG7" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                                        <body name="CB8" pos="0.04 0 0">
+                                            <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                                            <joint name="CJ0_8" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                                            <joint name="CJ1_8" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                                            <geom name="CG8" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                                            <body name="CB9" pos="0.04 0 0">
+                                                <inertial pos="0 0 0" quat="0.707107 0 0.707107 0" mass="0.0136136" diaginertia="2.52375e-06 2.52375e-06 6.38791e-07"/>
+                                                <joint name="CJ0_9" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.005"/>
+                                                <joint name="CJ1_9" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.005"/>
+                                                <geom name="CG9" size="0.01 0.015" quat="0.707107 0 0.707107 0" type="capsule" rgba="0.8 0.2 0.1 1"/>
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    <camera name="cam" mode="targetbody" pos="1 1 1" target="right_hand" /> <!--right_hand-->
+    <light directional="true" diffuse=".2 .2 .2" specular="0 0 0" pos="0 1 5" dir="0 -1 -1" castshadow="false"/>
+    <light directional="false" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 -1 4" dir="0 0 -1" />
+    <light directional="true" diffuse="0 0 0" specular=".7 .7 .7" pos="0 3 3" dir="0 -3 -3" />
+    <geom name="floor" pos="0 0 0" group="1" size="0 0 .1" type="plane" material="plane" condim="3" />
+  </worldbody>
+  <equality />
+</mujoco>
