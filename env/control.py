@@ -53,3 +53,6 @@ class ControlEnv():
 
     def render(self):
         self.env.render()
+
+    def end_render(self):
+        self.env.close()
