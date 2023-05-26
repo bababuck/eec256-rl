@@ -3,7 +3,6 @@ from agents.agent import Agent
 from agents.cost import Cost
 from env.control import ControlEnv
 import time
-import gym_roborope
 import gymnasium as gym
 import numpy as np
 
