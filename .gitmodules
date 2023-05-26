@@ -1,0 +1,3 @@
+[submodule "Gymnasium-Robotics-Fork"]
+	path = Gymnasium-Robotics-Fork
+	url = https://github.com/bababuck/Gymnasium-Robotics-Fork.git

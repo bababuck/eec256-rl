@@ -11,7 +11,7 @@ class Trainer():
         self.agent = agent
         self.cost = cost
 
-    def train(self, iterations):
+    def train(self, iterations, expert_data_path):
         """ Main training loop per GCL.
 
         Algorithm 1 from the paper.
@@ -20,10 +20,9 @@ class Trainer():
         iterations - number of iterations to train for
         """
         # Initialize q_k(τ) as either a random initial controller or from demonstrations
-        d_demo = Batch("expert_data/expert_cartpole.npy")
+        d_demo = Batch(expert_data_path)
         d_samp = Batch()
-#        for i in range(50):
-#            self.agent.pretrain(d_demo.states[:,:4], d_demo.states[:,4:5])
+
         # for iteration i = 1 to I:
         max_states = 1000
         max_states_per_traj = 1000
@@ -31,7 +30,8 @@ class Trainer():
             print(f"Iteration={i}")
 
             # Generate samples Dtraj from qk(τ )
-            d_traj, costs = self.agent.generate_samples(self.env, max_states, max_states_per_traj, self.cost)
+            d_traj = self.agent.generate_samples(self.env, max_states, max_states_per_traj)
+            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:4].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0], [0, 1]]] for s in range(np.shape(d_traj.states)[0])]
 
             # Append samples: Dsamp ← Dsamp ∪ Dtraj
             d_samp.extend(d_traj)
@@ -42,9 +42,17 @@ class Trainer():
             # Update qk(τ ) using Dtraj and the method from (Levine & Abbeel, 2014) to obtain qk+1(τ )
             states = torch.tensor(d_traj.states, dtype=torch.float32)
             self.agent.update(torch.tensor(d_traj.states, dtype=torch.float32), costs, None)
+            self.agent.test(env=self.env, num_test=3)
 
         # return optimized cost parameters θ and trajectory distribution q(τ)
 
-    def save_networks(self, save_folder):
-        self.cost.save(save_folder + "/cost.pt")
-        self.agent.save(save_folder + "/agent.pt")
+    def save_networks(self, save_folder, cost_net_name="cost.pt", agent_net_name="agent.pt"):
+        """ Save the networks for cost and agent to specified path.
+
+        Inputs:
+        save_folder - path to directory in which to store the network files
+        cost_net_name - name of file to save cost network to
+        agent_net_name - name of file to save agent=t network to
+        """
+        self.cost.save(save_folder + "/" + cost_net_name)
+        self.agent.save(save_folder + "/" + agent_net_name)

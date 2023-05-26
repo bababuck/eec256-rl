@@ -11,8 +11,36 @@ class Agent():
         self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
-    def get_action(self, state, training):
-        """ Return an action based on the current state.
+    def get_random_action(self, state):
+        """ Return an action based on the current state randomly chosed from model distribution.
+
+        Inputs:
+        state - observable state
+
+        Outputs:
+        action - action to perform
+        probs - probability of each_action
+        """
+        probs = self.get_probs(state, False)
+        action = np.random.choice(2, p = probs.numpy())
+        return action, probs
+
+    def get_policy_action(self, state):
+        """ Return an action based on the current state chosen as most probable action from distribution.
+
+        Inputs:
+        state - observable state
+
+        Outputs:
+        action - action to perform
+        probs - probability of each_action
+        """
+        probs = self.get_probs(state, False)
+        action = np.argmax(probs.numpy())
+        return action, probs
+
+    def get_probs(self, state, training):
+        """ Return probability distribution based on current state.
 
         Inputs:
         state - observable state
@@ -22,18 +50,11 @@ class Agent():
         action - action to perform
         probs - probability of each_action
         """
-        if training:
-            logits = self.net.forward(state)
-        else:
-            logits = self.net.forward(state).detach()
-
+        logits = self.net.forward(state)
         probs = torch.softmax(logits,-1)
-        action = -1
         if not training:
-            action = np.random.choice(2,  p = probs.detach().numpy())
-        else:
-            action = np.argmax(probs.detach().numpy())
-        return action, probs
+            probs = probs.detach()
+        return probs
 
     def update(self, states, cost, probs):
         """ Update policy and value functions based on a set of observations.
@@ -44,8 +65,7 @@ class Agent():
         states - sequence of observed states
         rewards - sequence of rewards from the performed actions
         """
-        actions, probs = self.get_action(states[:,:4], True)
-        actions = states[:,4:5]
+        probs = self.get_probs(states[:,:4], True)
         log_probs = torch.log(probs+1e-7)
         cost = torch.tensor(cost,dtype=torch.float32)
         cost = torch.mean(probs * cost, dim=-1)
@@ -64,14 +84,14 @@ class Agent():
         states = torch.tensor(states, dtype=torch.float32)
         truth = torch.tensor(truth, dtype=torch.float32)
         mse_loss = torch.nn.MSELoss()
-        _, probs = self.get_action(states, True)
+        probs = self.get_probs(states, True)
         loss = mse_loss(probs, truth)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-    def generate_samples(self, env, max_states, max_states_per_trajectory, cost_net):
+    def generate_samples(self, env, max_states, max_states_per_trajectory):
         """ Generate a set of sample trajectories from the enviroment.
 
         Inputs:
@@ -82,35 +102,44 @@ class Agent():
         Outputs:
         batch - batch containing the rewards, states, and actions
         """
-        rewards, states, actions, probs = [], [], [], []
+        states, actions, probs = [], [], []
         states_visited = 0
         while states_visited < max_states:
             state = env.reset()
-            c_rewards, c_states, c_actions, c_probs = [], [], [], []
-            action, prob = self.get_action(torch.tensor(state), False)
+            action, prob = self.get_random_action(torch.tensor(state))
             for i in range(max_states_per_trajectory):
+                states.append(state)
+                actions.append(action)
+                probs.append(prob.numpy()[action])
+
                 states_visited += 1
                 state, reward, done = env.step(action)
-                action, prob = self.get_action(torch.tensor(state), False)
-                c_states.append(state)
-                c_actions.append(action)
-                c_probs.append(prob.numpy()[action])
+                action, prob = self.get_random_action(torch.tensor(state))
                     
-                cost = [cost_net.get_cost(torch.tensor(state.tolist()+[0], dtype=torch.float32)).detach().item(), cost_net.get_cost(torch.tensor(state.tolist()+[1], dtype=torch.float32)).detach().item()]
-                c_rewards.append(cost)
                 if done:
                     break
 
-            states += c_states
-            actions += c_actions
-            probs += c_probs
-            rewards += c_rewards
+        return Batch(states=states, actions=actions, probs=probs)
 
-        return Batch(states=states, actions=actions, probs=probs), rewards
+    def test(self, env, num_test):
+        """ Run a test of the model on the enviroment.
+
+        Use the on-policy actions.
+        """
+        for t in range(num_test):
+            steps = 0
+            done = False
+            state = env.reset()
+            while not done:
+                steps += 1
+                action, _ = self.get_policy_action(torch.tensor(state))
+                state, _, done = env.step(action)
+            print(f"Test number {t}: {steps} steps reached")
 
     def forward(self, x):
-         return self.net.forward(x)
+        """ Run data through the network. """
+        return self.net.forward(x)
 
     def save(self, path):
-        """ Save the model"""
+        """ Save the model. """
         torch.save(self.state_dict(), path)

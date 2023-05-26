@@ -9,14 +9,16 @@ class Batch:
             self.states, self.actions = self.load_file(load_file)
             self.probs = np.ones((np.shape(self.states)[0], 1))
         else:
-            self.actions = np.array(actions)
+            self.actions = np.array(actions, dtype=int)
             if actions == []:
                 self.states = np.zeros((0, 4))
                 self.probs = np.zeros((0,1))
             else:
                 self.states = np.array(states)
                 self.probs = np.array(probs).reshape(-1,1)
-        self.states = np.concatenate((self.states, self.actions[:, None]), axis=1)
+        actions = np.zeros((self.actions.size, 2))
+        actions[np.arange(self.actions.size), self.actions] = 1
+        self.states = np.concatenate((self.states, actions), axis=1)
 
     def sample(self, count):
         sampled_batch = Batch()
