@@ -1,0 +1,106 @@
+<mujoco model="rope">
+     <asset>
+        <material name="block_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+    </asset>
+    <compiler angle="radian"/>
+    <size njmax="500" nconmax="100"/>
+    <worldbody>
+        <body name="CB0" pos="1.25 .75 0.4025">
+            <joint name="object1:joint" type="free" damping="0.01"></joint>
+            <geom name="CGH0" size="0.003 0.01" pos="0 0 .01" type="cylinder" material="block_mat"></geom>
+            <body name="CB1" pos="0.015 0 0">
+                <joint name="CJ0_1" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                <joint name="CJ1_1" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                <geom name="CGH1" size="0.003 0.01" pos="0 0 .01" type="cylinder" material="block_mat"></geom>
+                <body name="CB2" pos="0.015 0 0">
+                    <joint name="CJ0_2" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                    <joint name="CJ1_2" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                    <geom name="CGH2" size="0.003 0.01" pos="0 0 .01" type="cylinder" material="block_mat"></geom>
+                    <body name="CB3" pos="0.015 0 0">
+                        <joint name="CJ0_3" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                        <joint name="CJ1_3" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                        <geom name="CGH3" size="0.003 0.01" pos="0 0 .01" type="cylinder" material="block_mat"></geom>
+                        <body name="CB4" pos="0.015 0 0">
+                            <joint name="CJ0_4" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                            <joint name="CJ1_4" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                            <geom name="CGH4" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                  material="block_mat"></geom>
+                            <body name="CB5" pos="0.015 0 0">
+                                <joint name="CJ0_5" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                                <joint name="CJ1_5" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                                <geom name="CGH5" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                      material="block_mat"></geom>
+                                <body name="CB6" pos="0.015 0 0">
+                                    <joint name="CJ0_6" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                                    <joint name="CJ1_6" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                                    <geom name="CGH6" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                          material="block_mat"></geom>
+                                    <body name="CB7" pos="0.015 0 0">
+                                        <joint name="CJ0_7" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                                        <joint name="CJ1_7" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                                        <geom name="CGH7" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                              material="block_mat"></geom>
+                                        <body name="CB8" pos="0.015 0 0">
+                                            <joint name="CJ0_8" pos="-0.02 0 0" axis="0 1 0" group="3" damping="0.003"/>
+                                            <joint name="CJ1_8" pos="-0.02 0 0" axis="0 0 1" group="3" damping="0.003"/>
+                                            <geom name="CGH8" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                                  material="block_mat"></geom>
+                                            <body name="CB9" pos="0.015 0 0">
+                                                <joint name="CJ0_9" pos="-0.02 0 0" axis="0 1 0" group="3"
+                                                       damping="0.003"/>
+                                                <joint name="CJ1_9" pos="-0.02 0 0" axis="0 0 1" group="3"
+                                                       damping="0.003"/>
+                                                <geom name="CGH9" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                                      material="block_mat"></geom>
+                                                <body name="CB10" pos="0.015 0 0">
+                                                    <joint name="CJ0_10" pos="-0.02 0 0" axis="0 1 0" group="3"
+                                                           damping="0.003"/>
+                                                    <joint name="CJ1_10" pos="-0.02 0 0" axis="0 0 1" group="3"
+                                                           damping="0.003"/>
+                                                    <geom name="CGH10" size="0.003 0.01" pos="0 0 .01" type="cylinder"
+                                                          material="block_mat"></geom>
+                                                    <body name="CB11" pos="0.015 0 0">
+                                                        <joint name="CJ0_11" pos="-0.02 0 0" axis="0 1 0" group="3"
+                                                               damping="0.003"/>
+                                                        <joint name="CJ1_11" pos="-0.02 0 0" axis="0 0 1" group="3"
+                                                               damping="0.003"/>
+                                                        <geom name="CGH11" size="0.003 0.01" pos="0 0 .01"
+                                                              type="cylinder" material="block_mat"></geom>
+                                                        <body name="CB12" pos="0.015 0 0">
+                                                            <joint name="CJ0_12" pos="-0.02 0 0" axis="0 1 0" group="3"
+                                                                   damping="0.003"/>
+                                                            <joint name="CJ1_12" pos="-0.02 0 0" axis="0 0 1" group="3"
+                                                                   damping="0.003"/>
+                                                            <geom name="CGH12" size="0.003 0.01" pos="0 0 .01"
+                                                                  type="cylinder" material="block_mat"></geom>
+                                                            <body name="CB13" pos="0.015 0 0">
+                                                                <joint name="CJ0_13" pos="-0.02 0 0" axis="0 1 0"
+                                                                       group="3" damping="0.003"/>
+                                                                <joint name="CJ1_13" pos="-0.02 0 0" axis="0 0 1"
+                                                                       group="3" damping="0.003"/>
+                                                                <geom name="CGH13" size="0.003 0.01" pos="0 0 .01"
+                                                                      type="cylinder" material="block_mat"></geom>
+                                                                <body name="CB14" pos="0.015 0 0">
+                                                                    <joint name="CJ0_14" pos="-0.02 0 0" axis="0 1 0"
+                                                                           group="3" damping="0.003"/>
+                                                                    <joint name="CJ1_14" pos="-0.02 0 0" axis="0 0 1"
+                                                                           group="3" damping="0.003"/>
+                                                                    <geom name="CGH14" size="0.003 0.01" pos="0 0 .01"
+                                                                          type="cylinder" material="block_mat"></geom>
+                                                                </body>
+                                                            </body>
+                                                        </body>
+                                                    </body>
+                                                </body>
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

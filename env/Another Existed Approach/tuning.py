@@ -5,6 +5,8 @@ from planner import ArmPlanner
 from controllers import ArmPositionController
 import matplotlib.pyplot as plt
 import numpy as np
+import networkx as nx
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 env = rope_env()
 action_spec = env.action_spec()

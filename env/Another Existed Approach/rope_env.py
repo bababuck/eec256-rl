@@ -10,6 +10,7 @@ env = suite.make(
     ignore_done=True,
     use_camera_obs=False,
     control_freq=100,
+
 )
 import collections
 from dm_control import mjcf
@@ -19,6 +20,7 @@ from dm_control.composer.observation import observable
 from dm_control.manipulation.shared import observations
 
 import os
+
 
 EYE_IN_HAND_VIEW = "robot0_eye_in_hand"
 
