@@ -6,6 +6,7 @@ import time
 import gymnasium as gym
 import numpy as np
 
+
 if __name__ == '__main__':
 #    env = ControlEnv('CartPole-v1')
 #    env = ControlEnv('CartPole-v1')
@@ -13,11 +14,20 @@ if __name__ == '__main__':
 #    id="roborope-v0",
 #    entry_point=RopeEnv,
 #    )
-    env = gym.make('FetchPickAndPlace-v2', max_episode_steps=100, render_mode = "human")
+#    env = gym.make('FetchPickAndPlace-v2', max_episode_steps=100, render_mode = "human")
 #    env = gym.make('RoboRope-v0', render_mode = "human")
+    env = ControlEnv()
     env.reset()
     env.render()
-    time.sleep(2)
+    env.step([4, 0, 1])
+    env.step([4, 0, 1])
+    env.step([0, -0.5, 0])
+    env.step([0, 0, 0.5])
+    env.step([1, 0, 0.5])
+    env.step([1, 0, 0.5])
+    env.step([6, 1, 1])
+    env.step([0, 0, 0.5])
+    """
     action = np.array([0, 1, 0, 0])
     env.step(action)
     time.sleep(1)
@@ -67,9 +77,9 @@ if __name__ == '__main__':
     env.step(action)
     time.sleep(1)
     time.sleep(50)
-    env.close()
+    env.close()"""
 #    env.end_render()
-"""
+    """
     action_size = env.action_space.n
     state_size = env.observation_space.shape[0]
     hidden_layer_size = 32
