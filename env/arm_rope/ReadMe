@@ -1,3 +1,0 @@
-panda.xml is the origin robot arm which can only move up and down, forward and backward.
-
-Idea is using robot.xml which generated from Robosuite (https://github.com/ARISE-Initiative/robosuite/tree/master/robosuite/models/assets/robots/panda)
