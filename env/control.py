@@ -52,10 +52,8 @@ class ControlEnv():
             move_x = min(1, (new_x - curr_x)*20)
             move_y = min(1, (new_y - curr_y)*20)
             self.env.step(np.array([move_x, move_y, 0, 0]))
-        time.sleep(1)  
         # Then lower
         self.env.step(np.array([0, 0, -0.75, 0]))
-        time.sleep(1)  
         # Then move
         dx = action[1]/20
         dy = action[2]/20
@@ -67,7 +65,6 @@ class ControlEnv():
 #        self.env.step(np.array([dx, dy, 0, 0])) 
 #        curr_x, curr_y, _ = self.env.get_gripper_xpos()
 
-        time.sleep(1)  
         # Then raise
         self.reset_gripper_height()
         self.count += 1
