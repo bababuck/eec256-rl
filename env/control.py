@@ -21,11 +21,11 @@ class ControlEnv():
 
     @property
     def action_space(self):
-        return self.env.action_space
+        return 3
 
     @property
     def observation_space(self):
-        return self.env.observation_space
+        return 16
 
     def step(self, action):
         """ Take one action in the simulation.
