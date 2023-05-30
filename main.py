@@ -21,12 +21,11 @@ if __name__ == '__main__':
     env.render()
     env.step([4, 0, 1])
     env.step([4, 0, 1])
-    env.step([0, -0.5, 0])
-    env.step([0, 0, 0.5])
-    env.step([1, 0, 0.5])
-    env.step([1, 0, 0.5])
-    env.step([6, 1, 1])
-    env.step([0, 0, 0.5])
+    env.step([0, 0, -1])
+    env.step([7, 0, -1])
+    env.step([7, -0.5, 0])
+    env.step([0, 0.5, 0])
+
     """
     action = np.array([0, 1, 0, 0])
     env.step(action)

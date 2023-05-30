@@ -44,8 +44,6 @@ class ControlEnv():
 
     def do_actions(self, action):
 
-#        self.env.fix_gripper_width()
-
         # First move to picked location
         new_x, new_y, _ = self.env.get_rope_pos(action[0])
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
@@ -56,17 +54,8 @@ class ControlEnv():
             self.env.step(np.array([move_x, move_y, 0, 0]))
         time.sleep(1)  
         # Then lower
-        self.env.step(np.array([0, 0, -1, 0]))
+        self.env.step(np.array([0, 0, -0.75, 0]))
         time.sleep(1)  
-        # Then grasp
-        width = self.env.get_gripper_width()
-#        self.env.step(np.array([0, 0, 0, 0.01 - width]))
-        self.env.step(np.array([0, 0, 0, 0]))
-        self.env.step(np.array([0, 0, 0, 0]))
-        self.env.step(np.array([0, 0, 0, 0]))
-        self.env.step(np.array([0, 0, 0, 0]))
-        self.env.step(np.array([0, 0, 0, 0]))
-        time.sleep(2)  
         # Then move
         dx = action[1]/20
         dy = action[2]/20
@@ -77,13 +66,10 @@ class ControlEnv():
 #        dy = action[2]
 #        self.env.step(np.array([dx, dy, 0, 0])) 
 #        curr_x, curr_y, _ = self.env.get_gripper_xpos()
-        time.sleep(1)  
-        # Then release
-        width = self.env.get_gripper_width()
-#        self.env.step(np.array([0, 0, 0, 0.04 - width]))
+
         time.sleep(1)  
         # Then raise
-        self.env.step(np.array([0, 0, 1, 0]))
+        self.reset_gripper_height()
         self.count += 1
         return self.get_rope_states(), 0, self.count > 100
 
@@ -95,6 +81,14 @@ class ControlEnv():
             state.append(y)
         return state
 
+    def reset_gripper_height(self):
+        _, _, curr_z = self.env.get_gripper_xpos()
+        new_z = 0.475
+        while (curr_z > new_z + 0.001) or (curr_z < new_z - 0.001):
+            _, _, curr_z = self.env.get_gripper_xpos()
+            move_z = min(1, (new_z - curr_z)*20)
+            self.env.step(np.array([0, 0, move_z, 0]))
+
     def reset(self):
         """ Reset the enviroment.
 
@@ -102,15 +96,9 @@ class ControlEnv():
         observation - state of enviroment following the reset
         """
         observation, info = self.env.reset()
-        # Release the gripper
-#        self.env.step(np.array([0, 0, 0, -1]))
         # Set gripper height
-        _, _, curr_z = self.env.get_gripper_xpos()
-        new_z = 0.48
-        while (curr_z > new_z + 0.001) or (curr_z < new_z - 0.001):
-            _, _, curr_z = self.env.get_gripper_xpos()
-            move_z = min(1, (new_z - curr_z)*20)
-            self.env.step(np.array([0, 0, move_z, 0]))
+        self.reset_gripper_height()
+
         self.count = 0
         if self.random_agent is not None:
             for i in range(self.NUM_RND_ACTIONS):
