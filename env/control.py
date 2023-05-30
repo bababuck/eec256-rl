@@ -48,7 +48,7 @@ class ControlEnv():
         new_x, new_y, _ = self.env.get_rope_pos(action[0])
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
         while (curr_x > new_x + 0.001) or (curr_x < new_x - 0.001) or (curr_y > new_y + 0.001) or (curr_y < new_y - 0.001):
-            curr_x, curr_y, _ = self.env._get_gripper_xpos()
+            curr_x, curr_y, _ = self.env.get_gripper_xpos()
             move_x = min(1, (new_x - curr_x)*20)
             move_y = min(1, (new_y - curr_y)*20)
             self.env.step(np.array([move_x, move_y, 0, 0]))
