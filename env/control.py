@@ -1,7 +1,13 @@
 from .random_agent import RandomAgent
 import gymnasium as gym
 import numpy as np
+import math
 import time
+
+
+def poly_area(x, y):
+    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
 
 class ControlEnv():
     """ Interface for our RL agent to interact with the enviroment. """
@@ -44,6 +50,12 @@ class ControlEnv():
 
     def do_actions(self, action):
 
+        # Get the current rope states
+        curr_state = self.get_rope_states()
+        curr_rope_x = np.array(curr_state[::2])  # This gets every other element, starting from 0, so all x coordinates.
+        curr_rope_y = np.array(curr_state[1::2])  # This gets every other element, starting from 1, so all y coordinates.
+        curr_area = poly_area(curr_rope_x, curr_rope_y)
+
         # First move to picked location
         new_x, new_y, _ = self.env.get_rope_pos(action[0])
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
@@ -68,7 +80,32 @@ class ControlEnv():
         # Then raise
         self.reset_gripper_height()
         self.count += 1
-        return self.get_rope_states(), 0, self.count > 100
+
+        # New area
+        new_state = self.get_rope_states()
+        new_rope_x = np.array(new_state[::2])  # This gets every other element, starting from 0, so all x coordinates.
+        new_rope_y = np.array(new_state[1::2])  # This gets every other element, starting from 1, so all y coordinates.
+        new_area = poly_area(new_rope_x, new_rope_y)
+
+        # Calculate reward
+        # Initial state [1.2499990569368231, 0.75, 1.2799964178638663, 0.75, 1.3099998632539256, 0.75, 1.3399998312433623, 0.75, 1.3699998721215199, 0.75,
+        # 1.3999998901256643, 0.75, 1.429999854380289, 0.75, 1.4600019932462143, 0.75]
+        # Perimeter 0.24
+        radius = 0.21 / (2 * math.pi)
+        circle_area = math.pi * radius ** 2
+
+        # If the polygon is open, area is larger than circle area.
+        # Can change to higher order. Maybe add step penalty. Can be related to action length
+        reward = abs(curr_area - circle_area) - abs(new_area - circle_area)
+        """
+        if curr_area > circle_area:
+            reward = curr_area - new_area
+        else:
+            reward = new_area - curr_area
+        """
+        return new_state, reward, self.count > 100
+
+    # Get the area of polygon covered by the rope to calculate reward
 
     def get_rope_states(self):
         state = []

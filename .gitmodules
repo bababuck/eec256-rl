@@ -1,3 +1,9 @@
 [submodule "Gymnasium-Robotics-Fork"]
 	path = Gymnasium-Robotics-Fork
 	url = https://github.com/bababuck/Gymnasium-Robotics-Fork.git
+[submodule "subm.gym"]
+	path = subm.gym
+	url = https://github.com/bababuck/Gymnasium-Robotics-Fork.git
+[submodule "subm/gym"]
+	path = subm/gym
+	url = https://github.com/bababuck/Gymnasium-Robotics-Fork.git
