@@ -34,7 +34,7 @@ class Agent:
 
         # Continuous action based on NAF in https://arxiv.org/pdf/1603.00748.pdf
         # For each discrete action, the output is a lower triangular matrix L of size m
-        # and a vector μ of size m. There is also an additional real value.
+        # and a vector μ of size m. There is also an additional value estimator.
         n = discrete_action_size
         m = cont_action_size
         n_outputs_per_bin = (m + 1) * m // 2 + m + 1
@@ -48,6 +48,9 @@ class Agent:
         layers.append(nn.Linear(prev_size, n_outputs))
         self.net = nn.Sequential(*layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.net.to(self.device)
 
     def get_random_action(self, _state):
         """
@@ -116,10 +119,12 @@ class Agent:
         """
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor(state)
+        if state.device != self.device:
+            state = state.to(self.device)
         output = self.net(state)
         _, mus, qs = self.reformat_output(output)
-        mus = mus.detach().numpy()
-        qs = qs.detach().numpy()
+        mus = mus.detach().cpu().numpy()
+        qs = qs.detach().cpu().numpy()
 
         discrete_action_idx = np.argmax(qs)
         cont_action = mus[discrete_action_idx]
@@ -142,8 +147,13 @@ class Agent:
         """
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor(state)
+        if state.device != self.device:
+            state = state.to(self.device)
+
         if not isinstance(cont_action, torch.Tensor):
             cont_action = torch.Tensor(cont_action)
+        if cont_action.device != self.device:
+            cont_action = cont_action.to(self.device)
 
         output = self.net(state)
         Ls, mus, qs = self.reformat_output(output)
