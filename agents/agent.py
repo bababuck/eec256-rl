@@ -7,8 +7,8 @@ import numpy as np
 class Agent:
     """ Agent class that gives actions based on current state. """
 
-    def __init__(self, discrete_action_size, cont_action_size, cont_action_min, cont_action_max,
-                 state_size, hidden_layers, lr=0.001):
+    def __init__(self, discrete_action_size, cont_action_size, state_size, hidden_layers,
+                 cont_action_min=-1, cont_action_max=1, lr=0.001):
         """
         Init network and optimizer.
         Parameters
@@ -17,8 +17,9 @@ class Agent:
             Dimension of the continuous part of the action space.
         cont_action_size : int
             Dimension of the continuous part of the action space.
-        cont_action_min, cont_action_max : 1-D array-like
-            The bound of the continuous part of the action. Size should be (cont_action_size,).
+        cont_action_min, cont_action_max : float or 1-D array-like
+            The bound of the continuous part of the action. If is array，
+            size should be (cont_action_size,)l
             Used to generate the random actions.
         state_size : int
             Dimension of the state space.
@@ -136,11 +137,11 @@ class Agent:
         Return the Q-value for each discrete action.
         Parameters
         ----------
-        state : 1-D array-like
+        state : 1-D or 2-D array-like
             The observed state.
-        discrete_action : int
+        discrete_action : int or 1-D array-like
             The discrete part of the action.
-        cont_action : 1-D array-like
+        cont_action : 1-D or 2-D array-like
             The continuous part of the action.
         Returns
         -------
@@ -148,6 +149,11 @@ class Agent:
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor(state)
         if state.device != self.device:
+            state = state.to(self.device)
+
+        if not isinstance(discrete_action, torch.Tensor):
+            discrete_action = torch.Tensor(discrete_action)
+        if discrete_action.device != self.device:
             state = state.to(self.device)
 
         if not isinstance(cont_action, torch.Tensor):
@@ -164,25 +170,23 @@ class Agent:
 
         return q - 0.5 * (cont_action - mu) @ L @ L.T @ (cont_action - mu)
 
-    def update(self, state, action, target):
+    def update(self, states, actions, targets):
         """
         Update the Q-value estimation from on one step.
         Parameters
         ----------
-        state : 1-D array-like
-            The observed state.
-        action : 1-D array-like
-            The discrete part of the action.
-        action : 1-D ndarray
-            The action. The first dimension is the discrete action index,
+        states : 2-D array-like
+            The observed states.
+        actions : 2-D array-like
+            The actions. The first column are the discrete action indices,
             and the rest are continuous action.
-        target : float
-            Target value.
+        targets : 1-D array-like
+            Target values.
         """
-        discrete_action = action[0]
-        cont_action = action[1:]
-        q = self.get_q_values(state, discrete_action, cont_action)
-        loss = nn.MSELoss(target, q)
+        discrete_actions = actions[:, 0]
+        cont_actions = actions[:, 1:]
+        q = self.get_q_values(states, discrete_actions, cont_actions)
+        loss = nn.MSELoss(targets, q)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -209,33 +213,31 @@ class Agent:
         Inputs:
         env - ControlEnv type
         max_states - number of total states to visit
-        max_states_per_trajectory - max timesteps for a single rollout
+        max_states_per_trajectory - max time steps for a single rollout
 
         Outputs:
         batch - batch containing the rewards, states, and actions
         """
-        raise NotImplemented
-        # states, actions, probs = [], [], []
-        # states_visited = 0
-        # while states_visited < max_states:
-        #     state = env.reset()
-        #     action, prob = self.get_random_action(torch.tensor(state))
-        #     for i in range(max_states_per_trajectory):
-        #         states.append(state)
-        #         actions.append(action)
-        #         probs.append(prob.numpy()[action])
-        #
-        #         states_visited += 1
-        #         state, reward, done = env.step(action)
-        #         action, prob = self.get_random_action(torch.tensor(state))
-        #
-        #         if done:
-        #             break
-        #
-        # return Batch(states=states, actions=actions, probs=probs)
+        states, actions = [], []
+        states_visited = 0
+        while states_visited < max_states:
+            state = env.reset()
+            action = self.get_random_action(torch.tensor(state))
+            for i in range(max_states_per_trajectory):
+                states.append(state)
+                actions.append(action)
+
+                states_visited += 1
+                state, reward, done = env.step(action)
+                action = self.get_random_action(torch.tensor(state))
+
+                if done:
+                    break
+
+        return Batch(states=states, actions=actions)
 
     def test(self, env, num_test):
-        """ Run a test of the model on the enviroment.
+        """ Run a test of the model on the environment.
 
         Use the on-policy actions.
         """
@@ -245,7 +247,7 @@ class Agent:
             state = env.reset()
             while not done:
                 steps += 1
-                action, _ = self.get_policy_action(torch.tensor(state))
+                action = self.get_policy_action(torch.tensor(state))
                 state, _, done = env.step(action)
             print(f"Test number {t}: {steps} steps reached")
 
