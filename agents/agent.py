@@ -10,6 +10,7 @@ class Agent():
         """ Init network and optimizer. """
         self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
+        self.action_size = action_size
 
     def get_random_action(self, state):
         """ Return an action based on the current state randomly chosed from model distribution.
@@ -22,7 +23,7 @@ class Agent():
         probs - probability of each_action
         """
         probs = self.get_probs(state, False)
-        action = np.random.choice(2, p = probs.numpy())
+        action = np.random.choice(self.action_size, p = probs.numpy())
         return action, probs
 
     def get_policy_action(self, state):
@@ -65,9 +66,9 @@ class Agent():
         states - sequence of observed states
         rewards - sequence of rewards from the performed actions
         """
-        probs = self.get_probs(states[:,:4], True)
+        probs = self.get_probs(states[:,:24], True)
         log_probs = torch.log(probs+1e-7)
-        cost = torch.tensor(cost,dtype=torch.float32)
+        cost = torch.tensor(cost,dtype=torch.float32)        
         cost = torch.mean(probs * cost, dim=-1)
         entropy = torch.mean(torch.mul(probs, log_probs), dim=-1)
         loss = torch.mean(cost - entropy*1e-3)
@@ -91,7 +92,7 @@ class Agent():
         loss.backward()
         self.optimizer.step()
 
-    def generate_samples(self, env, max_states, max_states_per_trajectory):
+    def generate_samples(self, env, max_states, max_states_per_trajectory, cost):
         """ Generate a set of sample trajectories from the enviroment.
 
         Inputs:
@@ -106,35 +107,75 @@ class Agent():
         states_visited = 0
         while states_visited < max_states:
             state = env.reset()
-            action, prob = self.get_random_action(torch.tensor(state))
+            # seg = np.random.randint(16,24)
+            seg = self.get_e_greedy_seg(cost, state) + 16
+            state[seg] = 1
+            action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
+#            print(f"seg{seg} action{action}")
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
                 probs.append(prob.numpy()[action])
 
                 states_visited += 1
-                state, reward, done = env.step(action)
-                action, prob = self.get_random_action(torch.tensor(state))
-                    
+                state, reward, done = env.step(seg - 16, action)
+                # seg = np.random.randint(16,24)
+                seg = self.get_e_greedy_seg(cost, state) + 16
+                state[seg] = 1
+                action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
+#                print(f"seg{seg} action{action}")
+
                 if done:
                     break
 
         return Batch(states=states, actions=actions, probs=probs)
 
-    def test(self, env, num_test):
+    def get_e_greedy_seg(self, cost, state):
+        min_cost = 100000
+        seg = -1
+        for i in range(8):
+            state_list = state.tolist()
+            state_list[i+16] = 1
+            action, _ = self.get_policy_action(torch.tensor(state_list))
+            acts = 4*[0]
+            acts[action] = 1
+            costs = cost.get_cost(torch.tensor(state_list + acts, dtype=torch.float32)).detach()
+            if costs < min_cost:
+                min_cost = costs
+                seg = i
+        return seg
+
+
+    def test(self, env, num_test, cost):
         """ Run a test of the model on the enviroment.
 
         Use the on-policy actions.
         """
         for t in range(num_test):
-            steps = 0
             done = False
             state = env.reset()
             while not done:
-                steps += 1
+                env.render()
+                min_cost = 100000
+                seg = -1
+                for i in range(8):
+                    state_list = state.tolist()
+                    state_list[i+16] = 1
+                    action, _ = self.get_policy_action(torch.tensor(state_list))
+                    acts = 4*[0]
+                    acts[action] = 1
+                    costs = cost.get_cost(torch.tensor(state_list + acts, dtype=torch.float32)).detach()
+                    if costs < min_cost:
+                        min_cost = costs
+                        seg = i
+                    print(f"seg{seg} cost{costs}")
+                state = state.tolist()
+                state[seg+16] = 1
+#                print(state)
                 action, _ = self.get_policy_action(torch.tensor(state))
-                state, _, done = env.step(action)
-            print(f"Test number {t}: {steps} steps reached")
+#                print(action)
+                state, _, done = env.step(seg, action)
+#            print(state)
 
     def forward(self, x):
         """ Run data through the network. """
@@ -142,4 +183,4 @@ class Agent():
 
     def save(self, path):
         """ Save the model. """
-        torch.save(self.state_dict(), path)
+        torch.save(self.net.state_dict(), path)

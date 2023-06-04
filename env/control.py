@@ -1,6 +1,7 @@
 from .random_agent import RandomAgent
 import gymnasium as gym
 import numpy as np
+from utils.utils import normalize_states
 import time
 
 class ControlEnv():
@@ -21,13 +22,13 @@ class ControlEnv():
 
     @property
     def action_space(self):
-        return 3
+        return 4
 
     @property
     def observation_space(self):
-        return 16
+        return 24
 
-    def step(self, action):
+    def step(self, seg, action):
         """ Take one action in the simulation.
 
         Inputs:
@@ -39,13 +40,13 @@ class ControlEnv():
         reward - reward from the prior action
         done - is episode complete
         """
-        observation, reward, done = self.do_actions(action)
+        observation, reward, done = self.do_actions(seg, action)
         return observation, reward, done
 
-    def do_actions(self, action):
+    def do_actions(self, seg, action):
 
         # First move to picked location
-        new_x, new_y, _ = self.env.get_rope_pos(action[0])
+        new_x, new_y, _ = self.env.get_rope_pos(seg)
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
         while (curr_x > new_x + 0.001) or (curr_x < new_x - 0.001) or (curr_y > new_y + 0.001) or (curr_y < new_y - 0.001):
             curr_x, curr_y, _ = self.env.get_gripper_xpos()
@@ -55,28 +56,42 @@ class ControlEnv():
         # Then lower
         self.env.step(np.array([0, 0, -0.75, 0]))
         # Then move
-        dx = action[1]/20
-        dy = action[2]/20
+        dx = 0
+        dy = 0
+        if action == 0:
+            dx = 0.25
+        if action == 1:
+            dx = -0.25
+        if action == 2:
+            dy = 0.25
+        if action == 3:
+            dy = -0.25
+        dx = dx/20
+        dy = dy/20
         for i in range(20):
             self.env.step(np.array([dx, dy, 0, 0])) 
-
-#        dx = action[1]
-#        dy = action[2]
-#        self.env.step(np.array([dx, dy, 0, 0])) 
-#        curr_x, curr_y, _ = self.env.get_gripper_xpos()
 
         # Then raise
         self.reset_gripper_height()
         self.count += 1
-        return self.get_rope_states(), 0, self.count > 100
+        state = self.get_rope_states()
+        done = self.count > 50 or state[0] < 0.1 or state[14] > 0.4
+        for i in range(1,16,2):
+            if state[i] < 0.05 or state[i] > .35:
+                done = True
+
+        normalize_states(state)
+
+        return state, 0, done
 
     def get_rope_states(self):
         state = []
         for i in range(8):
             x, y, _ = self.env.get_rope_pos(i)
-            state.append(x)
-            state.append(y)
-        return state
+            state.append(x-1.1)
+            state.append(y-.55)
+        state = state + 8*[0]
+        return np.array(state)
 
     def reset_gripper_height(self):
         _, _, curr_z = self.env.get_gripper_xpos()
@@ -101,7 +116,9 @@ class ControlEnv():
             for i in range(self.NUM_RND_ACTIONS):
                 random_action = self.random_agent.get_action()
                 self.step(random_action)
-        return observation
+        state = self.get_rope_states()
+        normalize_states(state)
+        return state
 
     def render(self):
         self.env.render()

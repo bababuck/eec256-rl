@@ -41,6 +41,9 @@ class Cost():
             self.optimizer.zero_grad()
             ioc_lik.backward()
             self.optimizer.step()
+#        print(samp_costs)
+#        print(demo_costs)
+
 
     def get_cost(self, x):
         """ Get the cost of a given state-action pair. """
