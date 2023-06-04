@@ -4,19 +4,22 @@ import torch
 import random
 
 class Batch:
-    def __init__(self, load_file=None, states=[], probs=[], actions=[]):
+    def __init__(self, load_file=None, states=[], probs=[], actions=[], pick_probs=[]):
         if load_file:
             self.states, self.actions = self.load_file(load_file)
             self.probs = np.ones((np.shape(self.states)[0], 1))
+            self.pick_probs = np.ones((np.shape(self.states)[0], 1))
         else:
             self.actions = np.array(actions, dtype=int)
             if actions == []:
-                self.states = np.zeros((0, 4))
+                self.pick_probs = np.zeros((0,1))
+                self.states = np.zeros((0, 14))
                 self.probs = np.zeros((0,1))
             else:
                 self.states = np.array(states)
                 self.probs = np.array(probs).reshape(-1,1)
-        actions = np.zeros((self.actions.size, 2))
+                self.pick_probs = np.array(pick_probs).reshape(-1,1)
+        actions = np.zeros((self.actions.size, 4))
         actions[np.arange(self.actions.size), self.actions] = 1
         self.states = np.concatenate((self.states, actions), axis=1)
 
@@ -26,6 +29,7 @@ class Batch:
             idx = np.random.choice(len(self.states), count)
             sampled_batch.states = self.states[idx]
             sampled_batch.probs = self.probs[idx]
+            sampled_batch.pick_probs = self.pick_probs[idx]
             sampled_batch.actions = self.actions[idx]
         return sampled_batch
 
@@ -37,6 +41,7 @@ class Batch:
         """
         self.states = np.concatenate((self.states, other.states), axis=0)
         self.probs = np.concatenate((self.probs, other.probs), axis=0)
+        self.pick_probs = np.concatenate((self.pick_probs, other.pick_probs), axis=0)
         self.actions = np.concatenate((self.actions, other.actions), axis=0)
 
     def load_file(self, filename, max_obs=None):

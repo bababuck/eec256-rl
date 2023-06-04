@@ -1,33 +1,44 @@
+
 from .random_agent import RandomAgent
 import gymnasium as gym
 import numpy as np
+from agents.agent import Agent
+from agents.trainer import Trainer
+from utils.utils import normalize_states
 import time
+import torch
 
 class ControlEnv():
     """ Interface for our RL agent to interact with the enviroment. """
 
-    NUM_RND_ACTIONS = 50 # Number of random actions upon state reset
+    NUM_RND_ACTIONS = 3 # Number of random actions upon state reset
 
-    def __init__(self, add_randomness=False):
+    def __init__(self, add_randomness=False, sleep_time=0):
         """
         Random agent will be used to randomly initialize the state.
         """
         self.env = gym.make('FetchPickAndPlace-v2', max_episode_steps=100, render_mode = "human")
         self.count = 0
         if add_randomness:
-            self.random_agent = RandomAgent(self.env.action_space.n)
+            self.random_agent = True
         else:
             self.random_agent = None
+        np.random.seed(0)
+        self.sleep_time = sleep_time
 
     @property
     def action_space(self):
-        return 3
+        return 4
 
     @property
     def observation_space(self):
-        return 16
+        return 24
 
-    def step(self, action):
+    @property
+    def rope_observation_space(self):
+        return 12
+
+    def step(self, segment, direction):
         """ Take one action in the simulation.
 
         Inputs:
@@ -39,13 +50,19 @@ class ControlEnv():
         reward - reward from the prior action
         done - is episode complete
         """
-        observation, reward, done = self.do_actions(action)
+        observation, reward, done = self.do_actions(segment, direction)
         return observation, reward, done
 
-    def do_actions(self, action):
+    def do_actions(self, seg, action, reset=False):
 
         # First move to picked location
-        new_x, new_y, _ = self.env.get_rope_pos(action[0])
+        if seg == 1:
+            seg = 2
+        elif seg == 2:
+            seg = 4
+        elif seg == 3:
+            seg = 7
+        new_x, new_y, _ = self.env.get_rope_pos(seg)
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
         while (curr_x > new_x + 0.001) or (curr_x < new_x - 0.001) or (curr_y > new_y + 0.001) or (curr_y < new_y - 0.001):
             curr_x, curr_y, _ = self.env.get_gripper_xpos()
@@ -55,28 +72,51 @@ class ControlEnv():
         # Then lower
         self.env.step(np.array([0, 0, -0.75, 0]))
         # Then move
-        dx = action[1]/20
-        dy = action[2]/20
+        dx = 0
+        dy = 0
+        if action == 0:
+            dx = 1
+        if action == 1:
+            dx = -1
+        if action == 2:
+            dy = 1
+        if action == 3:
+            dy = -1
+        dx = dx/20
+        dy = dy/20
         for i in range(20):
             self.env.step(np.array([dx, dy, 0, 0])) 
-
-#        dx = action[1]
-#        dy = action[2]
-#        self.env.step(np.array([dx, dy, 0, 0])) 
-#        curr_x, curr_y, _ = self.env.get_gripper_xpos()
+            if not reset:
+                self.render()
+                time.sleep(self.sleep_time)
 
         # Then raise
         self.reset_gripper_height()
         self.count += 1
-        return self.get_rope_states(), 0, self.count > 100
+        state = self.get_rope_states() 
+
+        done = self.count > 50
+        for i in range(1,12,2):#[1,3,9,11]:#range(1,12,2):
+            if state[i] < 0.4 or state[i] > 1.1:
+                done = True
+        for i in range(0,12,2):#[0,2,8,10]:#range(0,12,2):
+            if state[i] < 1.05  or state[i] > 1.47:
+                done = True
+
+        normalize_states(state)
+
+        return state, 0, done
 
     def get_rope_states(self):
         state = []
-        for i in range(8):
+        for i in [0,2,3,4,5,7]:
             x, y, _ = self.env.get_rope_pos(i)
             state.append(x)
             state.append(y)
-        return state
+        state = state + 2*[0]
+#        for i in [4,5,6,7]:
+#            state[i] = 0
+        return np.array(state)
 
     def reset_gripper_height(self):
         _, _, curr_z = self.env.get_gripper_xpos()
@@ -97,11 +137,31 @@ class ControlEnv():
         self.reset_gripper_height()
 
         self.count = 0
+
+        setups = [[1, 3, 2, 2, 3, 1, 0, 0, 3, 3, 3, 3, 3, 1, 3, 1, 3, 1, 3, 1, 1, 1],
+              [2, 2, 3, 3, 1, 2, 3, 1, 3, 1, 0, 0, 0, 0, 2, 0, 3, 1, 0, 0, 3, 1, 1, 1],
+              [1, 3, 1, 3, 3, 3, 0, 2, 2, 3, 3, 1, 0, 0, 0, 0, 3, 1, 2, 1, 3, 3, 0, 0, 3, 2, 3, 3],
+              [3, 3, 1, 2, 0, 0, 0, 0, 3, 1, 1, 2, 1, 3],
+              [0, 2, 1, 3, 2, 1, 3, 1, 3, 1, 3, 1, 3, 1],
+              [1, 2, 2, 2, 1, 2, 0, 0, 3, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 1, 2, 0],
+              [3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 2, 0, 0, 0, 1, 2, 3, 3, 3, 0],
+              [3, 3, 1, 2, 1, 2, 0, 0, 3, 3, 3, 1, 3, 1, 0, 0, 3, 1, 3, 1, 3, 3, 2, 0, 0, 0, 2, 0],
+              [1, 3, 2, 2, 2, 2, 1, 3, 1, 3, 1, 3, 0, 2, 2, 0, 0, 2, 3, 1, 0, 0, 3, 1, 3, 1, 0, 0],                                                                                                                                         
+              [1, 2, 1, 3, 1, 2, 1, 2, 3, 3, 0, 2, 0, 0, 0, 0, 0, 0, 3, 1, 3, 1],
+              [2, 2, 0, 0, 1, 2, 1, 2, 3, 1, 1, 0, 3, 0, 3, 1],
+              [2, 2, 0, 0, 3, 1, 3, 3, 3, 1, 1, 3, 2, 1, 0, 0, 3, 2, 0, 0, 3, 3, 0, 0],
+              [0, 2, 2, 2, 3, 1, 2, 2, 3, 3, 3, 1, 3, 1, 0, 0, 3, 3, 1, 2, 3, 1],
+              [2, 2, 2, 2, 0, 2, 1, 2, 3, 1, 3, 1, 0, 0, 0, 0, 0, 0, 2, 0, 3, 1, 0, 0, 3, 1],
+              [0, 2, 0, 2, 1, 3, 3, 1, 1, 3, 0, 0, 2, 0, 2, 1, 0, 0, 0, 0]]
+
         if self.random_agent is not None:
-            for i in range(self.NUM_RND_ACTIONS):
-                random_action = self.random_agent.get_action()
-                self.step(random_action)
-        return observation
+            setup = setups[np.random.randint(0,15)]
+            for i in range(0,np.random.randint(0,len(setup)),2):
+                self.do_actions(setup[i], setup[i+1], True)
+
+        state = self.get_rope_states()
+        normalize_states(state)
+        return state
 
     def render(self):
         self.env.render()
