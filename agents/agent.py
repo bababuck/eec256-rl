@@ -179,7 +179,10 @@ class Agent():
                 print(state)
                 action, _ = self.get_policy_action(torch.tensor(state))
 #                print(action)
-                state, _, done = env.step(seg, action)
+                for i in range(4):
+                    state, _, done = env.step(seg, action)
+                    if done:
+                        break
 #            print(state)
 
     def forward(self, x):

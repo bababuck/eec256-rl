@@ -114,9 +114,24 @@ if __name__ == '__main__':
     env.end_render()
 #    """
     states = np.load("state.npy").tolist()
+    actual_actions = np.load("action.npy").tolist()
+    rot = []
+    for action in actual_actions:
+        a = (action + 2) % 4
+        rot.append(a)
+
+    actual_actions += rot
+    rot = []
+    for state in states:
+        r=state.copy()
+        for i in range(0,16,2):
+            r[i],r[i+1]=r[i+1],r[i]
+        rot.append(r)
+    states += rot
     for state in states:
         normalize_states(state)
-    actual_actions = np.load("action.npy").tolist()
+    
+
     expert_data = Batch(states=states, actions=actual_actions, probs=[1] * len(states))
 #    print(states)
 #    print(actual_actions)
