@@ -51,70 +51,42 @@ if __name__ == '__main__':
     env = ControlEnv()
     env.reset()
     env.render()
-#    """
+    """
 # 0 =[1,0]
 # 1=[-1,0]
 # 2=[0,1]
 # 3=[0,-1]
-    """
-    actual_actions = [np.load("actions.csv.npy").tolist(), np.load("actions2.csv.npy").tolist()]
-#    states = [np.load("state.csv.npy").tolist(), np.load("state2.csv.npy").tolist(), np.load("state3.csv.npy").tolist()]
-    states = [[4,4,4,4,4,4,4,4,7,7,7,7,0,0,0,0, 0,0,0,0,0,0,0,0, 7, 0,0, 7,7,7,7,7,7,7,7,7,7, 4],
-              [4,4,4,4,4,4,0,0,0,0,7,7,7,7,0,0,0,0,7,7,7,7, 0,0,0,0,7,7,7,7,    2,2,2,2, 5,5,5,5, 0, 0, 0, 0, 7,7,7,7,7,7],
-              []]
-    action_set = []
-    for t in range(len(actual_actions)):
-        action = actual_actions[t][:len(actual_actions[t])//4]
-        actions = []
-        print(action)
-        state = states[t]
-        print(state)
-        for i in range(len(action)):
-            print(i)
-            actions.append(state[i])
-            actions.append(action[i])
-        print(actions)
-        set = transform_action(actions)
-        action_set += set
 
-#    '''
+    action_set = []
     actual_actions = []
-    actions = [2, 2] * 4 + \
-               [5, 2] * 4+\
-               [0, 3] * 4+\
-               [7, 3] * 4+\
-               [0, 0] * 4+\
-               [7, 1] * 4+\
-               [0, 0] * 4+\
-               [7, 1] * 4+\
-               [2, 1] * 4+\
-               [5, 0] * 4+\
-               [0, 0] * 4+\
-               [7, 1] * 4+\
-               [7, 1] * 2+\
-               [4, 2] * 2+\
-               [3, 2] * 2+\
-               []
+    actions = [
+               [3,2,4,2,3,2,4,2, 7,1, 0,0, 1,1,7,1, 0,0],
+               [4,2, 3,2, 0,0, 7,1, 5,0, 2,1, 0,0, 7,1, 0,0, 7,1,6,0, 1,1, 7,1],
+               [7,3, 0,3, 7,3, 0,3, 2,2, 5,2, 7,1, 0,0, 7,1, 0,0,4,2, 3,2,],
+               [0,3, 7,3, 4,2, 3,2, 7,1, 0,0, 7,1, 0,0, 5,0,2,1, 0,0], # okay :/
+               ]
+
 #    ''' 
-    set = transform_action(actions)
-    action_set += set
+    for action in actions:
+        set = transform_action(action)
+        action_set += set
     states = []
     actual_actions = []
     for actions in action_set:
-        env.reset()
-        for i in range(0,len(actions),2):
-            states.append(env.get_rope_states())
-            states[-1][16+actions[i]] = 1
-            env.step(actions[i], actions[i+1])
-            actual_actions.append(actions[i+1])
-            env.render()
+        for _ in range(10):
+            env.reset(jitter=True)
+            for i in range(0,len(actions),2):
+                states.append(env.get_rope_states())
+                states[-1][16+actions[i]] = 1
+                env.step(actions[i], actions[i+1])
+                actual_actions.append(actions[i+1])
 
-    np.save("state", np.array(states))
-    np.save("action", np.array(actual_actions))
+    np.save("b_state", np.array(states))
+    np.save("b_action", np.array(actual_actions))
     env.end_render()
 #    """
-    states = np.load("state.npy").tolist()
-    actual_actions = np.load("action.npy").tolist()
+    states = np.load("b_state.npy").tolist()
+    actual_actions = np.load("b_action.npy").tolist()
     rot = []
     for action in actual_actions:
         a = (action + 2) % 4
@@ -131,13 +103,13 @@ if __name__ == '__main__':
     for state in states:
         normalize_states(state)
     
-
+    print(len(actual_actions))
     expert_data = Batch(states=states, actions=actual_actions, probs=[1] * len(states))
 #    print(states)
 #    print(actual_actions)
     action_size = 4
     state_size = 24
-    hidden_layer_size = 64
+    hidden_layer_size = 48
     hidden_layers = 2
     agent = Agent(action_size, state_size, hidden_layer_size, hidden_layers)
     cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)

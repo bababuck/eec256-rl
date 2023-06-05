@@ -113,12 +113,14 @@ class Agent():
             # seg = np.random.randint(16,24)
             seg = self.get_e_greedy_seg(cost, state) + 16
             state[seg] = 1
+            cum_prob = 1
             action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
 #            print(f"seg{seg} action{action}")
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
-                probs.append(prob.numpy()[action])
+                cum_prob *= prob.numpy()[action]
+                probs.append(cum_prob)
 
                 states_visited += 1
                 state, reward, done = env.step(seg - 16, action)

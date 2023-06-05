@@ -5,7 +5,7 @@ import numpy as np
 class Cost():
     """ Class for approximating the cost function. """
 
-    K = 10 # Number of update steps to perform each iteration
+    K = 50 # Number of update steps to perform each iteration
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
         """ Initialize the network and optimizer. """

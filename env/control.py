@@ -1,3 +1,4 @@
+
 from .random_agent import RandomAgent
 import gymnasium as gym
 import numpy as np
@@ -43,7 +44,7 @@ class ControlEnv():
         observation, reward, done = self.do_actions(seg, action)
         return observation, reward, done
 
-    def do_actions(self, seg, action):
+    def do_actions(self, seg, action, jitter=False):
 
         # First move to picked location
         new_x, new_y, _ = self.env.get_rope_pos(seg)
@@ -59,15 +60,18 @@ class ControlEnv():
         dx = 0
         dy = 0
         if action == 0:
-            dx = 0.25
+            dx = 1
         if action == 1:
-            dx = -0.25
+            dx = -1
         if action == 2:
-            dy = 0.25
+            dy = 1
         if action == 3:
-            dy = -0.25
+            dy = -1
         dx = dx/20
         dy = dy/20
+        if jitter:
+            dx = dx/5
+            dy = dy/5
         for i in range(20):
             self.env.step(np.array([dx, dy, 0, 0])) 
 
@@ -101,7 +105,7 @@ class ControlEnv():
             move_z = min(1, (new_z - curr_z)*20)
             self.env.step(np.array([0, 0, move_z, 0]))
 
-    def reset(self):
+    def reset(self, jitter=False):
         """ Reset the enviroment.
 
         Outputs:
@@ -112,6 +116,11 @@ class ControlEnv():
         self.reset_gripper_height()
 
         self.count = 0
+        if jitter:
+            for i in range(2):
+                self.do_actions(np.random.randint(0,7),np.random.randint(2,4),True)
+                
+
         if self.random_agent is not None:
             for i in range(self.NUM_RND_ACTIONS):
                 random_action = self.random_agent.get_action()
