@@ -12,14 +12,14 @@ def generate_simple_network(input_size, output_size, hidden_size, hidden_layers)
 def normalize_states(states):
     min_x = 100
     min_y = 100
-    for i in range(0, 15, 2):
+    for i in range(0, 8, 2):
         if (min_x > states[i]):
             min_x = states[i]
-    for i in range(0, 15, 2):
+    for i in range(0, 8, 2):
         states[i] = states[i] - min_x
 
-    for i in range(1, 16, 2):
+    for i in range(1, 8, 2):
         if (min_y > states[i]):
             min_y = states[i]
-    for i in range(1, 16, 2):
+    for i in range(1, 8, 2):
         states[i] = states[i] - min_y

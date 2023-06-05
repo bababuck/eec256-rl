@@ -22,7 +22,9 @@ class Trainer():
         # Initialize q_k(τ) as either a random initial controller or from demonstrations
         d_demo = expert_data
         d_samp = Batch()
-
+        for i in range(100):
+            d_s_demo = d_demo.sample(20)
+            self.agent.pretrain(d_s_demo.states[:,:12], d_s_demo.states[:,12:16])
         # for iteration i = 1 to I:
         max_states = 35
         max_states_per_traj = 35
@@ -30,8 +32,10 @@ class Trainer():
             print(f"Iteration={i}")
 
             # Generate samples Dtraj from qk(τ )
-            d_traj = self.agent.generate_samples(self.env, max_states, max_states_per_traj, self.cost)
-            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:24].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]] for s in range(np.shape(d_traj.states)[0])]
+            d_traj, seg_costs = self.agent.generate_samples(self.env, max_states, max_states_per_traj, self.cost)
+            self.agent.update_pick(d_traj.states, seg_costs)
+
+            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:12].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]] for s in range(np.shape(d_traj.states)[0])]
 
             # Append samples: Dsamp ← Dsamp ∪ Dtraj
             d_samp.extend(d_traj)

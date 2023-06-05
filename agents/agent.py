@@ -7,9 +7,13 @@ class Agent():
     """ Agent class that gives actions based on current state. """
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
-        """ Init network and optimizer. """
+        """ Init network and optimizer. """ 
         self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
+
+        self.pick_net = utils.generate_simple_network(state_size-4, 4, hidden_layer_size, hidden_layers)
+        self.pick_optimizer = torch.optim.Adam(self.pick_net.parameters(), lr=0.001)
+
         self.action_size = action_size
 
     def get_random_action(self, state):
@@ -57,6 +61,23 @@ class Agent():
             probs = probs.detach()
         return probs
 
+    def get_pick_probs(self, state, training):
+        """ Return probability distribution based on current state.
+
+        Inputs:
+        state - observable state
+        training - boolean if training or evaluating
+
+        Outputs:
+        action - action to perform
+        probs - probability of each_action
+        """
+        logits = self.pick_net.forward(torch.tensor(state, dtype=torch.float32))
+        probs = torch.softmax(logits,-1)
+        if not training:
+            probs = probs.detach()
+        return probs
+
     def update(self, states, cost, probs):
         """ Update policy and value functions based on a set of observations.
 
@@ -66,19 +87,44 @@ class Agent():
         states - sequence of observed states
         rewards - sequence of rewards from the performed actions
         """
-        print(states[:,:24])
-        probs = self.get_probs(states[:,:24], True)
-        log_probs = torch.log(probs+1e-7)
-        print(cost)
-        print(probs)
-        cost = torch.tensor(cost,dtype=torch.float32)        
-        cost = torch.mean(probs * cost, dim=-1)
-        entropy = torch.mean(torch.mul(probs, log_probs), dim=-1)
-        loss = torch.mean(cost - entropy*1e-3)
+        for i in range(1):
+            probs = self.get_probs(states[:,:12], True)
+            log_probs = torch.log(probs+1e-7)
+            print("dir")
+            print(cost)
+            print(probs)
+            costs = torch.tensor(cost,dtype=torch.float32)        
+            costs = torch.mean(probs * costs, dim=-1)
+            entropy = torch.mean(torch.mul(probs, log_probs), dim=-1)
+            loss = torch.mean(costs - entropy*1e-2)
+            
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+    def update_pick(self, states, cost):
+        """ Update policy and value functions based on a set of observations.
+
+        minq Eq[cθ(τ)] − H(τ)
+
+        Inputs:
+        states - sequence of observed states
+        rewards - sequence of rewards from the performed actions
+        """
+
+        for i in range(1):
+            probs = self.get_pick_probs(states[:,:8], True)
+            log_probs = torch.log(probs+1e-7)
+            print("seg")
+            print(cost)
+            print(probs)
+            costs = torch.tensor(cost,dtype=torch.float32)        
+            costs = torch.mean(probs * costs, dim=-1)
+            entropy = torch.mean(torch.mul(probs, log_probs), dim=-1)
+            loss = torch.mean(costs - entropy*1e-2)
+            self.pick_optimizer.zero_grad()
+            loss.backward()
+            self.pick_optimizer.step()
 
     def pretrain(self, states, truth):
         """ Pre-train the agent in a supervised learning fashion.
@@ -94,6 +140,7 @@ class Agent():
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        print(loss)
 
     def generate_samples(self, env, max_states, max_states_per_trajectory, cost):
         """ Generate a set of sample trajectories from the enviroment.
@@ -108,10 +155,12 @@ class Agent():
         """
         states, actions, probs = [], [], []
         states_visited = 0
+        seg_costs = []
         while states_visited < max_states:
             state = env.reset()
             # seg = np.random.randint(16,24)
-            seg = self.get_e_greedy_seg(cost, state) + 16
+            seg, scost, p = self.get_e_greedy_seg(cost, state)
+            seg += 8
             state[seg] = 1
             cum_prob = 1
             action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
@@ -119,38 +168,44 @@ class Agent():
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
-                cum_prob *= prob.numpy()[action]
+                cum_prob = p * prob.numpy()[action]
                 probs.append(cum_prob)
-
+                seg_costs.append(scost)
                 states_visited += 1
-                state, reward, done = env.step(seg - 16, action)
+                state, reward, done = env.step(seg - 8, action)
                 # seg = np.random.randint(16,24)
-                seg = self.get_e_greedy_seg(cost, state) + 16
+                seg, scost, p = self.get_e_greedy_seg(cost, state)
+                seg += 8
                 state[seg] = 1
+                env.render()
                 action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
 #                print(f"seg{seg} action{action}")
-
                 if done:
                     break
 
-        return Batch(states=states, actions=actions, probs=probs)
+#        print("done")
+        return Batch(states=states, actions=actions, probs=probs), seg_costs
 
     def get_e_greedy_seg(self, cost, state):
-        if np.random.randint(0, 10) > 8:
-            return np.random.randint(0,8)
+#        if np.random.randint(0, 10) > 9:
+#            return np.random.randint(0,4)
         min_cost = 100000
         seg = -1
-        for i in range(8):
+        seg_costs = []
+        for i in range(4):
             state_list = state.tolist()
-            state_list[i+16] = 1
+            state_list[i+8] = 1
             action, _ = self.get_policy_action(torch.tensor(state_list))
             acts = 4*[0]
             acts[action] = 1
             costs = cost.get_cost(torch.tensor(state_list + acts, dtype=torch.float32)).detach()
+            seg_costs.append(costs)
             if costs < min_cost:
                 min_cost = costs
                 seg = i
-        return seg
+        probs = self.get_pick_probs(state[:8], False)
+        seg = np.random.choice(self.action_size, p = probs.numpy())
+        return seg, seg_costs, probs.numpy()[seg]
 
 
     def test(self, env, num_test, cost):
@@ -165,9 +220,9 @@ class Agent():
                 env.render()
                 min_cost = 100000
                 seg = -1
-                for i in range(8):
+                for i in range(4):
                     state_list = state.tolist()
-                    state_list[i+16] = 1
+                    state_list[i+8] = 1
                     action, _ = self.get_policy_action(torch.tensor(state_list))
                     acts = 4*[0]
                     acts[action] = 1
@@ -177,7 +232,7 @@ class Agent():
                         seg = i
                     print(f"seg{i} cost{costs}")
                 state = state.tolist()
-                state[seg+16] = 1
+                state[seg+8] = 1
                 print(state)
                 action, _ = self.get_policy_action(torch.tensor(state))
 #                print(action)

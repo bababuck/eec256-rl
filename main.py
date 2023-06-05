@@ -15,7 +15,7 @@ def transform_action(actions):
     actions_cp = actions.copy()
     # Mirror segment picked
     for i in range(0,len(actions),2):
-        actions_cp[i] = 7-actions_cp[i]
+        actions_cp[i] = 3-actions_cp[i]
         if actions_cp[i+1] == 0:
             actions_cp[i+1] = 1
         elif actions_cp[i+1] == 1:
@@ -25,7 +25,7 @@ def transform_action(actions):
     actions_cp = actions.copy()
     # Mirror both
     for i in range(0,len(actions),2):
-        actions_cp[i] = 7-actions_cp[i]
+        actions_cp[i] = 3-actions_cp[i]
         if actions_cp[i+1] == 0:
             actions_cp[i+1] = 1
         elif actions_cp[i+1] == 1:
@@ -57,14 +57,22 @@ if __name__ == '__main__':
 # 2=[0,1]
 # 3=[0,-1]
 
-    action_set = []
     actual_actions = []
+    action_set = []
     actions = [
                [3,2,4,2,3,2,4,2, 7,1, 0,0, 1,1,7,1, 0,0],
-               [4,2, 3,2, 0,0, 7,1, 5,0, 2,1, 0,0, 7,1, 0,0, 7,1,6,0, 1,1, 7,1],
-               [7,3, 0,3, 7,3, 0,3, 2,2, 5,2, 7,1, 0,0, 7,1, 0,0,4,2, 3,2,],
-               [0,3, 7,3, 4,2, 3,2, 7,1, 0,0, 7,1, 0,0, 5,0,2,1, 0,0], # okay :/
+               [4,2, 3,2, 0,0, 7,1, 4,0, 3,1, 0,0, 7,1, 7,1],
+               [7,3, 0,3, 7,3, 0,3, 2,2, 4,2, 7,1, 0,0, 7,1, 0,0,4,2, 3,2,],
+               [0,3, 7,3, 4,2, 3,2, 7,1, 0,0, 7,1, 0,0, 4,0,2,1, 0,0], # okay :/
                ]
+    for action in actions:
+        for i in range(0,len(action), 2):
+            if action[i] == 7:
+                action[i] = 3
+            elif action[i] == 3:
+                action[i] = 1
+            elif action[i] == 4:
+                action[i] = 2
 
 #    ''' 
     for action in actions:
@@ -77,7 +85,7 @@ if __name__ == '__main__':
             env.reset(jitter=True)
             for i in range(0,len(actions),2):
                 states.append(env.get_rope_states())
-                states[-1][16+actions[i]] = 1
+                states[-1][8+actions[i]] = 1
                 env.step(actions[i], actions[i+1])
                 actual_actions.append(actions[i+1])
 
@@ -87,29 +95,30 @@ if __name__ == '__main__':
 #    """
     states = np.load("b_state.npy").tolist()
     actual_actions = np.load("b_action.npy").tolist()
+
     rot = []
     for action in actual_actions:
         a = (action + 2) % 4
         rot.append(a)
 
     actual_actions += rot
+
     rot = []
     for state in states:
         r=state.copy()
-        for i in range(0,16,2):
+        for i in range(0,8,2):
             r[i],r[i+1]=r[i+1],r[i]
         rot.append(r)
     states += rot
     for state in states:
         normalize_states(state)
     
-    print(len(actual_actions))
     expert_data = Batch(states=states, actions=actual_actions, probs=[1] * len(states))
 #    print(states)
 #    print(actual_actions)
     action_size = 4
-    state_size = 24
-    hidden_layer_size = 48
+    state_size = 12
+    hidden_layer_size = 8
     hidden_layers = 2
     agent = Agent(action_size, state_size, hidden_layer_size, hidden_layers)
     cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)

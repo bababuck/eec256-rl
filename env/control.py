@@ -47,6 +47,12 @@ class ControlEnv():
     def do_actions(self, seg, action, jitter=False):
 
         # First move to picked location
+        if seg == 1:
+            seg = 3
+        elif seg == 2:
+            seg = 4
+        elif seg == 3:
+            seg = 7
         new_x, new_y, _ = self.env.get_rope_pos(seg)
         curr_x, curr_y, _ = self.env.get_gripper_xpos()
         while (curr_x > new_x + 0.001) or (curr_x < new_x - 0.001) or (curr_y > new_y + 0.001) or (curr_y < new_y - 0.001):
@@ -78,10 +84,11 @@ class ControlEnv():
         # Then raise
         self.reset_gripper_height()
         self.count += 1
-        state = self.get_rope_states()
-        done = self.count > 50 or state[0] < 0.1 or state[14] > 0.4
-        for i in range(1,16,2):
-            if state[i] < 0.05 or state[i] > .35:
+        state = self.get_rope_states() 
+
+        done = self.count > 50 or state[0] < 1.23 or state[6] > 1.47
+        for i in range(1,8,2):
+            if state[i] < 0.63 or state[i] > .87:
                 done = True
 
         normalize_states(state)
@@ -90,11 +97,11 @@ class ControlEnv():
 
     def get_rope_states(self):
         state = []
-        for i in range(8):
+        for i in [0,3,4,7]:
             x, y, _ = self.env.get_rope_pos(i)
-            state.append(x-1.1)
-            state.append(y-.55)
-        state = state + 8*[0]
+            state.append(x)
+            state.append(y)
+        state = state + 4*[0]
         return np.array(state)
 
     def reset_gripper_height(self):
@@ -118,7 +125,7 @@ class ControlEnv():
         self.count = 0
         if jitter:
             for i in range(2):
-                self.do_actions(np.random.randint(0,7),np.random.randint(2,4),True)
+                self.do_actions(np.random.randint(0,4),np.random.randint(2,4),True)
                 
 
         if self.random_agent is not None:

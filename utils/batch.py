@@ -11,7 +11,7 @@ class Batch:
         else:
             self.actions = np.array(actions, dtype=int)
             if actions == []:
-                self.states = np.zeros((0, 24))
+                self.states = np.zeros((0, 12))
                 self.probs = np.zeros((0,1))
             else:
                 self.states = np.array(states)
