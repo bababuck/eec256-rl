@@ -66,8 +66,11 @@ class Agent():
         states - sequence of observed states
         rewards - sequence of rewards from the performed actions
         """
+        print(states[:,:24])
         probs = self.get_probs(states[:,:24], True)
         log_probs = torch.log(probs+1e-7)
+        print(cost)
+        print(probs)
         cost = torch.tensor(cost,dtype=torch.float32)        
         cost = torch.mean(probs * cost, dim=-1)
         entropy = torch.mean(torch.mul(probs, log_probs), dim=-1)
@@ -131,6 +134,8 @@ class Agent():
         return Batch(states=states, actions=actions, probs=probs)
 
     def get_e_greedy_seg(self, cost, state):
+        if np.random.randint(0, 10) > 8:
+            return np.random.randint(0,8)
         min_cost = 100000
         seg = -1
         for i in range(8):
@@ -168,10 +173,10 @@ class Agent():
                     if costs < min_cost:
                         min_cost = costs
                         seg = i
-                    print(f"seg{seg} cost{costs}")
+                    print(f"seg{i} cost{costs}")
                 state = state.tolist()
                 state[seg+16] = 1
-#                print(state)
+                print(state)
                 action, _ = self.get_policy_action(torch.tensor(state))
 #                print(action)
                 state, _, done = env.step(seg, action)

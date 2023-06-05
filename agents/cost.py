@@ -19,10 +19,10 @@ class Cost():
         """
         for iter in range(self.K):
             # Sample demonstration batch Dˆdemo ⊂ Ddemo
-            d_s_demo = d_demo.sample(50)
+            d_s_demo = d_demo.sample(20)
 
             # Sample background batch Dˆsamp ⊂ Dsamp
-            d_s_samp = d_samp.sample(50)
+            d_s_samp = d_samp.sample(20)
             # Append demonstration batch to background batch:
             # Dˆsamp ← Dˆdemo ∪ Dˆsamp
             d_s_samp.extend(d_s_demo)
@@ -41,8 +41,8 @@ class Cost():
             self.optimizer.zero_grad()
             ioc_lik.backward()
             self.optimizer.step()
-#        print(samp_costs)
-#        print(demo_costs)
+        print(samp_costs)
+        print(demo_costs)
 
 
     def get_cost(self, x):

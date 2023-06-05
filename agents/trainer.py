@@ -24,8 +24,8 @@ class Trainer():
         d_samp = Batch()
 
         # for iteration i = 1 to I:
-        max_states = 25
-        max_states_per_traj = 25
+        max_states = 35
+        max_states_per_traj = 35
         for i in range(iterations):
             print(f"Iteration={i}")
 

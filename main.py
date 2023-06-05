@@ -122,7 +122,7 @@ if __name__ == '__main__':
 #    print(actual_actions)
     action_size = 4
     state_size = 24
-    hidden_layer_size = 32
+    hidden_layer_size = 64
     hidden_layers = 2
     agent = Agent(action_size, state_size, hidden_layer_size, hidden_layers)
     cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)
