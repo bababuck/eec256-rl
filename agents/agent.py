@@ -22,7 +22,7 @@ class Agent():
         probs - probability of each_action
         """
         probs = self.get_probs(state, False)
-        action = np.random.choice(2, p = probs.numpy())
+        action = np.random.choice(32, p=probs.numpy())
         return action, probs
 
     def get_policy_action(self, state):
@@ -50,8 +50,9 @@ class Agent():
         action - action to perform
         probs - probability of each_action
         """
+        state = state.to(torch.float32)
         logits = self.net.forward(state)
-        probs = torch.softmax(logits,-1)
+        probs = torch.softmax(logits, -1)
         if not training:
             probs = probs.detach()
         return probs
@@ -65,7 +66,7 @@ class Agent():
         states - sequence of observed states
         rewards - sequence of rewards from the performed actions
         """
-        probs = self.get_probs(states[:,:4], True)
+        probs = self.get_probs(states[:,:16], True)  # change 4 to 16
         log_probs = torch.log(probs+1e-7)
         cost = torch.tensor(cost,dtype=torch.float32)
         cost = torch.mean(probs * cost, dim=-1)
@@ -105,8 +106,10 @@ class Agent():
         states, actions, probs = [], [], []
         states_visited = 0
         while states_visited < max_states:
-            state = env.reset()
-            action, prob = self.get_random_action(torch.tensor(state))
+            env.reset()
+            state = env.get_rope_states()
+            # print("\n Torch State: \n", torch.tensor(state, dtype=torch.float64))
+            action, prob = self.get_random_action(torch.tensor(state, dtype=torch.float32))
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
@@ -114,7 +117,8 @@ class Agent():
 
                 states_visited += 1
                 state, reward, done = env.step(action)
-                action, prob = self.get_random_action(torch.tensor(state))
+
+                action, prob = self.get_random_action(torch.tensor(state, dtype=torch.float64))
                     
                 if done:
                     break
@@ -132,7 +136,7 @@ class Agent():
             state = env.reset()
             while not done:
                 steps += 1
-                action, _ = self.get_policy_action(torch.tensor(state))
+                action, _ = self.get_policy_action(torch.tensor(state, dtype=torch.float64))
                 state, _, done = env.step(action)
             print(f"Test number {t}: {steps} steps reached")
 

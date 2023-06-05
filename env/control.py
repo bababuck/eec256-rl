@@ -9,6 +9,29 @@ def poly_area(x, y):
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
+def to_action(input_action):
+    x = input_action[0]
+    b = input_action[1]
+    #  0:Up, 1:Down, 2:Left, 3:Right
+    if b == 0:
+        y, z = -0.5, 0
+    elif b == 1:
+        y, z = 0.5, 0
+    elif b == 2:
+        y, z = 0, -0.5
+    elif b == 3:
+        y, z = 0, 0.5
+    else:
+        raise ValueError("The second element of the input list should be 0, 1, 2, or 3.")
+
+    return [x, y, z]
+
+
+def one_to_2d(one_d):
+    two_d_back = [one_d // 4, one_d % 4]
+    return two_d_back
+
+
 class ControlEnv():
     """ Interface for our RL agent to interact with the enviroment. """
 
@@ -27,7 +50,7 @@ class ControlEnv():
 
     @property
     def action_space(self):
-        return 3
+        return 32
 
     @property
     def observation_space(self):
@@ -45,11 +68,13 @@ class ControlEnv():
         reward - reward from the prior action
         done - is episode complete
         """
+        if isinstance(action, int):
+            action = one_to_2d(action)
+        action = to_action(action)
         observation, reward, done = self.do_actions(action)
         return observation, reward, done
 
     def do_actions(self, action):
-
         # Get the current rope states
         curr_state = self.get_rope_states()
         curr_rope_x = np.array(curr_state[::2])  # This gets every other element, starting from 0, so all x coordinates.
@@ -97,6 +122,7 @@ class ControlEnv():
         # If the polygon is open, area is larger than circle area.
         # Can change to higher order. Maybe add step penalty. Can be related to action length
         reward = abs(curr_area - circle_area) - abs(new_area - circle_area)
+        reward = reward * 100  # Scale up
         """
         if curr_area > circle_area:
             reward = curr_area - new_area
@@ -106,6 +132,14 @@ class ControlEnv():
         return new_state, reward, self.count > 100
 
     # Get the area of polygon covered by the rope to calculate reward
+
+    def get_area(self):
+        new_state = self.get_rope_states()
+        new_rope_x = np.array(new_state[::2])  # This gets every other element, starting from 0, so all x coordinates.
+        new_rope_y = np.array(new_state[1::2])  # This gets every other element, starting from 1, so all y coordinates.
+        new_area = poly_area(new_rope_x, new_rope_y)
+        return new_area
+
 
     def get_rope_states(self):
         state = []

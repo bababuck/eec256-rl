@@ -31,7 +31,8 @@ class Trainer():
 
             # Generate samples Dtraj from qk(τ )
             d_traj = self.agent.generate_samples(self.env, max_states, max_states_per_traj)
-            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:4].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0], [0, 1]]] for s in range(np.shape(d_traj.states)[0])]
+            # What is a?
+            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:16].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0], [0, 1]]] for s in range(np.shape(d_traj.states)[0])]
 
             # Append samples: Dsamp ← Dsamp ∪ Dtraj
             d_samp.extend(d_traj)
