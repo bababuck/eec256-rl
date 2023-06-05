@@ -50,7 +50,7 @@ class ControlEnv():
 
     @property
     def action_space(self):
-        return 32
+        return 1
 
     @property
     def observation_space(self):

@@ -1,5 +1,5 @@
-from agents.trainer import Trainer
-from agents.agent import Agent
+from agents.trainernew import Trainer
+from agents.agentnew import Agent
 from agents.cost import Cost
 from env.control import ControlEnv
 import time
@@ -282,10 +282,10 @@ if __name__ == '__main__':
     env.step([7, -0.5, 0])
     env.step([0, 0.5, 0])
     """
-    action_size = env.action_space
+    action_size = 32   # Differ env.action_space
     state_size = env.observation_space
     hidden_layer_size = 32
-    hidden_layers = 1
+    hidden_layers = [8, 8, 8]
     agent = Agent(action_size, state_size, hidden_layer_size, hidden_layers)
     cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)
     trainer = Trainer(env, agent, cost)
