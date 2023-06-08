@@ -123,13 +123,18 @@ class ControlEnv():
         # Can change to higher order. Maybe add step penalty. Can be related to action length
         reward = abs(curr_area - circle_area) - abs(new_area - circle_area)
         reward = reward * 100  # Scale up
+
+        done = self.count > 50 or new_state[0] < 1.23 or new_state[6] > 1.47
+        for i in range(1, 8, 2):
+            if new_state[i] < 0.63 or new_state[i] > .87:
+                done = True
         """
         if curr_area > circle_area:
             reward = curr_area - new_area
         else:
             reward = new_area - curr_area
         """
-        return new_state, reward, self.count > 100
+        return new_state, reward, done
 
     # Get the area of polygon covered by the rope to calculate reward
 
@@ -139,7 +144,6 @@ class ControlEnv():
         new_rope_y = np.array(new_state[1::2])  # This gets every other element, starting from 1, so all y coordinates.
         new_area = poly_area(new_rope_x, new_rope_y)
         return new_area
-
 
     def get_rope_states(self):
         state = []

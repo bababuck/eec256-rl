@@ -5,11 +5,11 @@ import numpy as np
 class Cost():
     """ Class for approximating the cost function. """
 
-    K = 10 # Number of update steps to perform each iteration
+    K = 5 # Number of update steps to perform each iteration
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
         """ Initialize the network and optimizer. """
-        self.net = utils.generate_simple_network(state_size + action_size, 1, hidden_layer_size, hidden_layers)
+        self.net = utils.generate_simple_network(state_size, 1, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
     def non_linear_ioc(self, d_demo, d_samp):
@@ -19,17 +19,16 @@ class Cost():
         """
         for iter in range(self.K):
             # Sample demonstration batch Dˆdemo ⊂ Ddemo
-            d_s_demo = d_demo.sample(50)
+            d_s_demo = d_demo.sample(20)
 
             # Sample background batch Dˆsamp ⊂ Dsamp
-            d_s_samp = d_samp.sample(50)
+            d_s_samp = d_samp.sample(20)
             # Append demonstration batch to background batch:
             # Dˆsamp ← Dˆdemo ∪ Dˆsamp
             d_s_samp.extend(d_s_demo)
             # Estimate dLIOC dθ (θ) using Dˆdemo and Dˆsamp
             samp_probs = d_s_samp.probs
             samp_probs_t = torch.tensor(samp_probs, dtype=torch.float32)
-
             # z = [1/k * Sigma_k(qκ(τ))]^-1
             # L_ioc = 1/N * Sigma_demo(cost(τ)) + log( 1/M * Sigma_samp(z * exp(-cost(τ)) ) )
             samp_costs = self.get_cost(torch.tensor(d_s_samp.states, dtype=torch.float32))

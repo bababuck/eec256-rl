@@ -26,9 +26,22 @@ def do_step(action):
 
 
 def do_last_step(action):
-    actions.append(action)
+    actions.append(two_to_1d(action))
     observation, reward, done = env.step(action)
     rewards.append(reward)
+
+
+def load_file(filename, max_obs=None):
+    loaded_data = np.load(filename, allow_pickle=True)
+    states = np.zeros((0, 16))
+    actions = np.array([])
+    for ob in loaded_data:
+        states = np.concatenate((states, np.array(ob[0])), axis=0)
+        actions = np.concatenate((actions, np.array(ob[1])), axis=0)
+        obs = np.shape(states)[0]
+        if max_obs != None and obs > max_obs:
+            break
+    return states, actions.astype(int)
 
 
 if __name__ == '__main__':
@@ -43,7 +56,7 @@ if __name__ == '__main__':
     env = ControlEnv()
     env.reset()
     env.render()
-    """ 
+    """
     expert_data = []
     states = []
     actions = []
@@ -281,13 +294,18 @@ if __name__ == '__main__':
     env.step([7, 0, -1])
     env.step([7, -0.5, 0])
     env.step([0, 0.5, 0])
+    """    """
+    states, actions = load_file("expert_data/expert_rope.npy")
+
+    print("\n Shape: \n", states.shape)
     """
     action_size = 32   # Differ env.action_space
     state_size = env.observation_space
     hidden_layer_size = 32
-    hidden_layers = [8, 8, 8]
-    agent = Agent(action_size, state_size, hidden_layer_size, hidden_layers)
-    cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers)
+    hidden_layers = [32, 32, 32]
+    hidden_layers_cost = 2
+    agent = Agent(action_size, state_size, hidden_layers)
+    cost = Cost(action_size, state_size, hidden_layer_size, hidden_layers_cost)
     trainer = Trainer(env, agent, cost)
     iterations = 400
     trainer.train(iterations, "expert_data/expert_rope.npy")
