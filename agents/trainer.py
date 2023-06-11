@@ -67,13 +67,13 @@ class Trainer():
             print("\n Costs: ", costs)
             # Update qk(τ ) using Dtraj and the method from (Levine & Abbeel, 2014) to obtain qk+1(τ )
             states = torch.tensor(d_traj.states[:, :12], dtype=torch.float32)
-            self.agent.update(states, d_traj.actions, costs)
+            self.agent.update(states, d_traj.actions, costs, self.env)
             if i % 20 == 0:
-                self.save_networks('networks', agent_net_name=f"agent_big_it_{i}.pt")
+                self.save_networks('networks', agent_net_name=f"agent_last_{i}.pt")
 
         # return optimized cost parameters θ and trajectory distribution q(τ)
 
-    def save_networks(self, save_folder, cost_net_name="cost.pt", agent_net_name="agent.pt"):
+    def save_networks(self, save_folder, cost_net_name="cost_new.pt", agent_net_name="agent.pt"):
         """ Save the networks for cost and agent to specified path.
 
         Inputs:

@@ -79,14 +79,14 @@ class Agent:
             qs[0] = -1/qs[0]
             qs[1] = -1 / qs[1]
         elif qs[0] < 0:
-            qs[0] = 0 + 10e-7
+            qs[0] = qs[1]/100  # Like greedy
         elif qs[1] < 0:
-            qs[1] = 0 + 10e-7
+            qs[1] = qs[0]/100
         prob = qs / qs.sum()
         discrete_action_idx = np.random.choice(2, p=prob)
         cont_action_mean = mus[discrete_action_idx]
         # Assumes Random continuous action is normal distributed
-        cont_action = [np.random.normal(cont_action_mean[0], 1), np.random.normal(cont_action_mean[1], 1)]
+        cont_action = [np.random.normal(cont_action_mean[0], 0.01), np.random.normal(cont_action_mean[1], 0.01)]
         action = np.concatenate(([discrete_action_idx], cont_action))
         return action, prob
 
@@ -185,7 +185,7 @@ class Agent:
 
         return q - 0.5 * (cont_action - mu) @ L @ L.T @ (cont_action - mu)
 
-    def update(self, states, actions, costs):
+    def update(self, states, actions, costs, env):
         """
         Update the Q-value estimation from on one step.
         Parameters
@@ -204,17 +204,27 @@ class Agent:
         n_states = states.shape[0]
         targets = torch.zeros(n_states)
         q = torch.zeros(n_states)
+
+        # One more step
+        action_next, prob_next = self.get_random_action(states[-1])
+        states_next, reward_next, done_next = env.step(int(action_next[0]), action_next[1:3])
+        q_next = self.get_q_values(states_next, int(action_next[0]), action_next[1:3]) * 100
         c = torch.zeros(n_states)
+
         costs = torch.tensor(costs, dtype=torch.float32)
+        print("\n Costs: ", costs)
         for i in range(n_states):
-            q[i] = self.get_q_values(states[i], int(discrete_actions[i]), cont_actions[i])
+            q[i] = self.get_q_values(states[i], int(discrete_actions[i]), cont_actions[i]) * 100
             c[i] = -costs[i]  # Cost is negative reward
         for i in range(n_states - 1):
             targets[i] = q[i + 1]
-        targets[n_states - 1] = q[n_states - 1]  # Suppose q isn't change for last state
+        targets[n_states - 1] = q_next
         targets = targets + c  # Gamma = 1
         mse = nn.MSELoss()
         loss = mse(q, targets)
+        print("\n q: ", q)
+        print("\n targets: ", targets)
+        print("\n loss: ", loss)
         self.cum_loss.append(loss.item())
         self.optimizer.zero_grad()
         loss.backward()
