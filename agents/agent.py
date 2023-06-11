@@ -6,17 +6,18 @@ import numpy as np
 class Agent():
     """ Agent class that gives actions based on current state. """
 
-    def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
+    def __init__(self, dir_action_size, seg_action_size, state_size, hidden_layer_size, hidden_layers):
         """ Init network and optimizer. """ 
-        self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
+        self.net = utils.generate_simple_network(state_size, dir_action_size, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
-        segs = 2
-        self.pick_net = utils.generate_simple_network(state_size-segs, segs, hidden_layer_size, hidden_layers)
+        self.pick_net = utils.generate_simple_network(state_size-seg_action_size, seg_action_size, hidden_layer_size, hidden_layers)
         self.pick_optimizer = torch.optim.Adam(self.pick_net.parameters(), lr=0.001)
 
-        self.action_size = action_size
+        self.dir_action_size = dir_action_size
+        self.seg_action_size = seg_action_size
 
+        # For logging if desired
         self.pick_loss = []
         self.loss = []
         self.entropy = []
@@ -25,27 +26,27 @@ class Agent():
         self.pick_cost = []
 
     def get_random_action(self, state):
-        """ Return an action based on the current state randomly chosed from model distribution.
+        """ Return a direction based on the current state randomly chosed from model distribution.
 
         Inputs:
         state - observable state
 
         Outputs:
-        action - action to perform
+        action - direction to move
         probs - probability of each_action
         """
         probs = self.get_probs(state, False)
-        action = np.random.choice(self.action_size, p = probs.numpy())
+        action = np.random.choice(self.dir_action_size, p = probs.numpy())
         return action, probs
 
     def get_policy_action(self, state):
-        """ Return an action based on the current state chosen as most probable action from distribution.
+        """ Return a direction based on the current state chosen as most probable action from distribution.
 
         Inputs:
         state - observable state
 
         Outputs:
-        action - action to perform
+        action - direction to move
         probs - probability of each_action
         """
         probs = self.get_probs(state, False)
@@ -53,14 +54,13 @@ class Agent():
         return action, probs
 
     def get_probs(self, state, training):
-        """ Return probability distribution based on current state.
+        """ Return probability distribution based on current state for direction to move.
 
         Inputs:
         state - observable state
         training - boolean if training or evaluating
 
         Outputs:
-        action - action to perform
         probs - probability of each_action
         """
         logits = self.net.forward(state)
@@ -70,88 +70,108 @@ class Agent():
         return probs
 
     def get_pick_probs(self, state, training):
-        """ Return probability distribution based on current state.
+        """ Return probability distribution based on current state for segment to pick.
 
         Inputs:
         state - observable state
         training - boolean if training or evaluating
 
         Outputs:
-        action - action to perform
+        action - segment to pick
         probs - probability of each_action
         """
-        logits = self.pick_net.forward(torch.tensor(state, dtype=torch.float32))
+        logits = self.pick_net.forward(state)
         probs = torch.softmax(logits,-1)
         if not training:
             probs = probs.detach()
         return probs
 
+
+    def get_random_pick(self,state):
+        """ Return a segment based on the current state randomly chosed from model distribution.
+
+        Inputs:
+        state - observable state
+
+        Outputs:
+        action - segment to grab
+        probs - probability of each_action
+        """
+        state = torch.tensor(state[:12], dtype=torch.float32)
+        probs = self.get_pick_probs(state, False).numpy()
+        seg = np.random.choice(self.seg_action_size, p = probs)
+        return seg, probs[seg]
+
     def update(self, states, cost, probs):
-        """ Update policy and value functions based on a set of observations.
+        """ Update policy function for direction based on a set of observations.
 
         minq Eq[cθ(τ)] − H(τ)
 
         Inputs:
         states - sequence of observed states
-        rewards - sequence of rewards from the performed actions
+        cost - sequence of costs of the performed actions
         """
         cost = np.array(cost)
+
+        # Doesn't change the gradient but easier to see issues
         mean = cost.mean(axis=1)
         mean = mean.reshape((-1, 1))
         cost = cost - mean
-        print(cost.mean(axis=0))
-        for i in range(1):
-            probs = self.get_probs(states[:,:14], True)
-            log_probs = torch.log(probs+1e-7)
-            print("dir")
-            print(cost)
-            print(probs)
-            costs = torch.tensor(cost,dtype=torch.float32)        
-            costs = torch.mean(probs * costs, dim=-1)
-            entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
-            self.cost.append(torch.mean(costs).item())
-            self.entropy.append(-torch.mean(entropy).item())
-            loss = torch.mean(costs - entropy)
-            self.loss.append(loss.item())            
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+
+        probs = self.get_probs(states[:,:14], True)
+        log_probs = torch.log(probs+1e-7)
+        costs = torch.tensor(cost,dtype=torch.float32)        
+        costs = torch.mean(probs * costs, dim=-1)
+        entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
+        loss = torch.mean(costs - entropy)
+
+        # Logging
+        self.cost.append(torch.mean(costs).item())
+        self.entropy.append(-torch.mean(entropy).item())
+        self.loss.append(loss.item())            
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
     def update_pick(self, states, cost):
-        """ Update policy and value functions based on a set of observations.
+        """ Update policy function for segment picking based on a set of observations.
 
         minq Eq[cθ(τ)] − H(τ)
 
         Inputs:
         states - sequence of observed states
-        rewards - sequence of rewards from the performed actions
+        cost - sequence of costs from the performed actions
         """
-
         cost = np.array(cost)
+
+        # Doesn't change the gradient but easier to see issues
         mean = cost.mean(axis=1)
         mean = mean.reshape((-1, 1))
         cost = cost - mean
-        for i in range(1):
-            probs = self.get_pick_probs(states[:,:12], True)
-            log_probs = torch.log(probs+1e-7)
-            print("seg")
-            print(cost)
-            print(probs)
-            costs = torch.tensor(cost,dtype=torch.float32)        
-            costs = torch.mean(probs * costs, dim=-1)
-            entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
-            self.pick_cost.append(torch.mean(costs).item())
-            self.pick_entropy.append(-torch.mean(entropy).item())
-            loss = torch.mean(costs - entropy)
-            self.pick_loss.append(loss.item())
-            self.pick_optimizer.zero_grad()
-            loss.backward()
-            self.pick_optimizer.step()
+
+        states = torch.tensor(states[:, :12], dtype=torch.float32)
+        probs = self.get_pick_probs(states, True)
+        log_probs = torch.log(probs+1e-7)
+
+        costs = torch.tensor(cost,dtype=torch.float32)        
+        costs = torch.mean(probs * costs, dim=-1)
+        entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
+        loss = torch.mean(costs - entropy)
+
+        # Logging
+        self.pick_cost.append(torch.mean(costs).item())
+        self.pick_entropy.append(-torch.mean(entropy).item())
+        self.pick_loss.append(loss.item())
+
+        self.pick_optimizer.zero_grad()
+        loss.backward()
+        self.pick_optimizer.step()
 
     def pretrain(self, states, truth):
         """ Pre-train the agent in a supervised learning fashion.
 
-        Supervised training will not
+        Doesn't have much effect on quality of results.
         """
         tstates = torch.tensor(states, dtype=torch.float32)
         truth = torch.tensor(truth, dtype=torch.float32)
@@ -162,12 +182,11 @@ class Agent():
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-#        print(loss)
 
     def pretrain_pick(self, states, truth):
         """ Pre-train the agent in a supervised learning fashion.
 
-        Supervised training will not
+        Doesn't have much effect on quality of results.
         """
         tstates = torch.tensor(states[:,:12], dtype=torch.float32)
         truth = torch.tensor(states[:,12:14], dtype=torch.float32)
@@ -178,9 +197,8 @@ class Agent():
         self.pick_optimizer.zero_grad()
         loss.backward()
         self.pick_optimizer.step()
-#        print(loss)
 
-    def generate_samples(self, env, max_states, max_states_per_trajectory, cost):
+    def generate_samples(self, env, max_states, max_states_per_trajectory):
         """ Generate a set of sample trajectories from the enviroment.
 
         Inputs:
@@ -189,72 +207,54 @@ class Agent():
         max_states_per_trajectory - max timesteps for a single rollout
 
         Outputs:
-        batch - batch containing the rewards, states, and actions
+        batch - batch containing the probabilities, states, and actions
         """
         states, actions, probs, pick_probs = [], [], [], []
         states_visited = 0
-        seg_costs = []
+
         while states_visited < max_states:
             state = env.reset()
-            # seg = np.random.randint(16,24)
-            seg, scost, p = self.get_e_greedy_seg(cost, state)
-            seg += 12
-            state[seg] = 1
-            cum_prob = 1
+
+            seg, seg_prob = self.get_random_pick(state)
+            state[seg+12] = 1
             action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
-#            print(f"seg{seg} action{action}")
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
-                cum_prob = prob.numpy()[action]
-                probs.append(cum_prob)
-                pick_probs.append(p)
-                seg_costs.append(scost)
+                probs.append(prob.numpy()[action])
+                pick_probs.append(seg_prob)
                 states_visited += 1
-                state, reward, done = env.step((seg - 12)*3, action)
-                # seg = np.random.randint(16,24)
-                seg, scost, p = self.get_e_greedy_seg(cost, state)
-                seg += 12
-                state[seg] = 1
+
+                state, reward, done = env.step((seg*3), action) # Segment network outputs 0 and 1, but need to pick either 0 or 3
+
+                seg, seg_probs = self.get_random_pick(state)
+                state[seg+12] = 1
                 env.render()
                 action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
-#                print(f"seg{seg} action{action}")
-                if done:
+
+                if done or states_visited > max_states:
                     break
 
         utils.transform_action(actions, states, probs)
-        return Batch(states=states, actions=actions, probs=probs, pick_probs=pick_probs * 16), seg_costs * 16
-
-    def get_random_pick(self,state):
-        probs = self.get_pick_probs(state[:12], False).numpy()
-        seg = np.random.choice(2, p = probs)
-        return seg, probs[seg]
-
-    def get_e_greedy_seg(self, cost, state):
-#        if np.random.randint(0, 10) > 9:
-#            return np.random.randint(0,4)
-        seg_costs = []
-        for i in range(2):
-            state_list = state.tolist()
-            state_list[i+12] = 1
-            costs = cost.get_pick_cost(torch.tensor(state_list, dtype=torch.float32)).detach()
-            seg_costs.append(costs.item())
-        seg, probs = self.get_random_pick(state)
-        return seg, seg_costs, probs
+        pick_probs=pick_probs * 16 # Unchanged regardless of transformation
+        return Batch(states=states, actions=actions, probs=probs, pick_probs=pick_probs)
 
     def forward(self, x):
         """ Run data through the network. """
         return self.net.forward(x)
 
     def save(self, path):
-        """ Save the model. """
+        """ Save the direction model. """
         torch.save(self.net.state_dict(), path)
 
     def save_pick(self,path):
+        """ Save the segment model. """
         torch.save(self.pick_net.state_dict(), path)
 
     def load(self, path):
+        """ Load the direction model. """
         self.net.load_state_dict(torch.load(path))
 
     def load_pick(self, path):
+        """ Load the segment model. """
         self.pick_net.load_state_dict(torch.load(path))

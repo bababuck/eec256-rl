@@ -9,11 +9,12 @@ import numpy as np
 if __name__ == '__main__':
     # For demo of our policy
     # """
-    action_size = 4
+    dir_action_size = 4
+    seg_action_size = 2
     state_size = 14
     agent_hidden_layer_size = 24
     agent_hidden_layers = 3
-    agent = Agent(action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
+    agent = Agent(dir_action_size, seg_action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
     agent.load_pick("networks/pickagent_big_it_400.pt")
     agent.load("networks/agent_big_it_400.pt")
     env = ControlEnv(True, 0.02)

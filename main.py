@@ -21,15 +21,16 @@ if __name__ == '__main__':
     for state in states:
         normalize_states(state)
     expert_data = Batch(states=states, actions=actions, probs=[1] * len(states), pick_probs=[1] * len(states))
-
-    action_size = 4
+ 
+    dir_action_size = 4
+    seg_action_size = 2
     state_size = 14
     agent_hidden_layer_size = 24
     agent_hidden_layers = 3
     cost_hidden_layer_size = 24
     cost_hidden_layers = 3
-    agent = Agent(action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
-    cost = Cost(action_size, state_size, cost_hidden_layer_size, cost_hidden_layers)
+    agent = Agent(dir_action_size, seg_action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
+    cost = Cost(dir_action_size, state_size, cost_hidden_layer_size, cost_hidden_layers)
     env = ControlEnv(True)
     trainer = Trainer(env, agent, cost)
     iterations = 801
