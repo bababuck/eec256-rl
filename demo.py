@@ -13,6 +13,8 @@ def create_demo(env):
     2 = [0, 1]
     3 = [0,-1]
 
+    Output states is
+
     Inputs:
     env = ControlEnv() that to simulate the given actions. Will capture the states from this as part
           of expert state-action pairs.
@@ -65,19 +67,36 @@ def create_demo(env):
         # Initialize the enviroment to a mixed up pre-set state
         env.reset()
         setup = setups[index]
-        for i in range(0,len(setup),2):
-            ob, _, _  = env.step(segment=setup[i], direction=setup[i+1])
+        for i in range(0, len(setup), 2):
+            # Decode direction to continuous
+            directions = [0, 0]
+            if setup[i+1] == 0:
+                directions = [1, 0]
+            elif setup[i+1] == 1:
+                directions = [-1, 0]
+            elif setup[i+1] == 2:
+                directions = [0, 1]
+            elif setup[i + 1] == 3:
+                directions = [0, -1]
+            ob, _, _ = env.step(segment=setup[i], direction=directions)
 
         # Simulate the expert actions one by one
         demo = demos[index]
-        for i in range(0,len(demo),2):
-            seg = 0 if demo[i] == 0 else 1  # Encode segment as 1 or 0 since only two options
-            ob[seg+env.rope_observation_space] = 1 # Segment encoded as part of state
-
+        for i in range(0, len(demo), 2):
             states.append(ob.tolist())
-            actions.append(demo[i+1]) # Direction saved in actions
+            d_action = [0, 0, 0]
+            d_action[0] = demo[i]
+            if demo[i+1] == 0:
+                d_action[1:3] = [1, 0]
+            elif demo[i+1] == 1:
+                d_action[1:3] = [-1, 0]
+            elif demo[i+1] == 2:
+                d_action[1:3] = [0, 1]
+            elif demo[i + 1] == 3:
+                d_action[1:3] = [0, -1]
+            actions.append(d_action) # Save action pairs
 
-            ob, _, _ = env.step(segment=demo[i], direction=demo[i+1])
+            ob, _, _ = env.step(segment=demo[i], direction=d_action[1:3])
 
     return actions, states
 
@@ -89,5 +108,5 @@ if __name__ == '__main__':
 
     actions, states = create_demo(env)
 
-    np.save("demos/demo_states", np.array(states))
-    np.save("demos/demo_actions", np.array(actions))
+    np.save("demos/demo_cont_states", np.array(states))
+    np.save("demos/demo_cont_actions", np.array(actions))

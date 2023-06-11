@@ -1,246 +1,288 @@
 from utils.batch import Batch
 import utils.utils as utils
 import torch
+import torch.nn as nn
 import numpy as np
 
-class Agent():
+
+class Agent:
     """ Agent class that gives actions based on current state. """
 
-    def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
-        """ Init network and optimizer. """ 
-        self.net = utils.generate_simple_network(state_size, action_size, hidden_layer_size, hidden_layers)
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
-
-        segs = 2
-        self.pick_net = utils.generate_simple_network(state_size-segs, segs, hidden_layer_size, hidden_layers)
-        self.pick_optimizer = torch.optim.Adam(self.pick_net.parameters(), lr=0.001)
-
-        self.action_size = action_size
-
-        self.pick_loss = []
-        self.loss = []
-        self.entropy = []
-        self.cost = []
-        self.pick_entropy = []
-        self.pick_cost = []
-
-    def get_random_action(self, state):
-        """ Return an action based on the current state randomly chosed from model distribution.
-
-        Inputs:
-        state - observable state
-
-        Outputs:
-        action - action to perform
-        probs - probability of each_action
+    def __init__(self, discrete_action_size, cont_action_size, state_size, hidden_layers,
+                 cont_action_min=-1, cont_action_max=1, lr=0.001):
         """
-        probs = self.get_probs(state, False)
-        action = np.random.choice(self.action_size, p = probs.numpy())
-        return action, probs
+        Init network and optimizer.
+        Parameters
+        ----------
+        discrete_action_size : int
+            Dimension of the continuous part of the action space.
+        cont_action_size : int
+            Dimension of the continuous part of the action space.
+        cont_action_min, cont_action_max : float or 1-D array-like
+            The bound of the continuous part of the action. If is array，
+            size should be (cont_action_size,)l
+            Used to generate the random actions.
+        state_size : int
+            Dimension of the state space.
+        hidden_layers : 1-D array-like
+            The size of each hidden layer.
+        lr : float
+            The learning rate.
+        """
+        self.discrete_action_size = discrete_action_size
+        self.cont_action_size = cont_action_size
+        self.cont_action_min = cont_action_min
+        self.cont_action_max = cont_action_max
+        self.cum_loss = []
+        # Continuous action based on NAF in https://arxiv.org/pdf/1603.00748.pdf
+        # For each discrete action, the output is a lower triangular matrix L of size m
+        # and a vector μ of size m. There is also an additional value estimator.
+        n = discrete_action_size
+        m = cont_action_size
+        n_outputs_per_bin = (m + 1) * m // 2 + m + 1
+        n_outputs = n * n_outputs_per_bin
+
+        layers = []
+        prev_size = state_size
+        for size in hidden_layers:
+            layers += [nn.Linear(prev_size, size), nn.ReLU(inplace=True)]
+            prev_size = size
+        layers.append(nn.Linear(prev_size, n_outputs))
+        self.net = nn.Sequential(*layers)
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.net.to(self.device)
+
+    def get_random_action(self, _state):
+        """
+        Return a random action.
+        The discrete action is chosen uniformly, and the continuous action is sampled
+        uniformly between `cont_action_min` and `cont_action_max`.
+        Parameters
+        ----------
+        _state : 1-D array-like
+            The observed state. ignored.
+
+        Returns
+        -------
+        action : 1-D ndarray
+            The random action. The first dimension is the discrete action index, and the
+            rest are continuous action
+        """
+
+        output = self.net(_state)
+        _, mus, qs = self.reformat_output(output)
+        mus = mus.detach().cpu().numpy()
+        qs = qs.detach().cpu().numpy()
+        if qs[0] < 0 and qs[1] < 0:
+            qs[0] = -1/qs[0]
+            qs[1] = -1 / qs[1]
+        elif qs[0] < 0:
+            qs[0] = 0 + 10e-7
+        elif qs[1] < 0:
+            qs[1] = 0 + 10e-7
+        prob = qs / qs.sum()
+        discrete_action_idx = np.random.choice(2, p=prob)
+        cont_action_mean = mus[discrete_action_idx]
+        # Assumes Random continuous action is normal distributed
+        cont_action = [np.random.normal(cont_action_mean[0], 1), np.random.normal(cont_action_mean[1], 1)]
+        action = np.concatenate(([discrete_action_idx], cont_action))
+        return action, prob
+
+    def reformat_output(self, output):
+        """
+        Reformat the network output. Gradients are kept.
+        Parameters
+        ----------
+        output: 1-D Tensor
+            Network output. Size (n * ((m + 1) * m // 2 + m + 1),)
+        Returns
+        -------
+        Ls: 3-D Tensor
+            Lower triangular matrices. Size (n, m, m). Each (m, m) matrix is lower triangular.
+        mus: 2-D Tensor
+            Action mean. Size (n, m).
+        qs: 1-D Tensor
+            Q-value estimator for each discrete action. Size (n,).
+        """
+        n = self.discrete_action_size
+        m = self.cont_action_size
+        n_triangular_entries = (m + 1) * m // 2
+
+        Ls = torch.zeros((n, m, m))
+        tril_indices = torch.tril_indices(m, m)
+        Ls[:, tril_indices[0], tril_indices[1]] = torch.reshape(output[:n * n_triangular_entries],
+                                                                (n, n_triangular_entries))
+        mus = torch.reshape(output[n * n_triangular_entries: n * (n_triangular_entries + m)],
+                            (n, m))
+        qs = output[n * (n_triangular_entries + m):]
+        assert qs.shape == (n,)
+        return Ls, mus, qs
 
     def get_policy_action(self, state):
-        """ Return an action based on the current state chosen as most probable action from distribution.
-
-        Inputs:
-        state - observable state
-
-        Outputs:
-        action - action to perform
-        probs - probability of each_action
         """
-        probs = self.get_probs(state, False)
-        action = np.argmax(probs.numpy())
-        return action, probs
+        Return the best action based on the input state based on the agent's estimation.
+        Parameters
+        ----------
+        state : 1-D array-like
+        The observed state.
 
-    def get_probs(self, state, training):
-        """ Return probability distribution based on current state.
-
-        Inputs:
-        state - observable state
-        training - boolean if training or evaluating
-
-        Outputs:
-        action - action to perform
-        probs - probability of each_action
+        Returns
+        -------
+        action : 1-D ndarray
+            The policy's best action. The first dimension is the discrete action index,
+            and the rest are continuous action.
         """
-        logits = self.net.forward(state)
-        probs = torch.softmax(logits,-1)
-        if not training:
-            probs = probs.detach()
-        return probs
+        if not isinstance(state, torch.Tensor):
+            state = torch.Tensor(state)
+        if state.device != self.device:
+            state = state.to(self.device)
+        output = self.net(state)
+        _, mus, qs = self.reformat_output(output)
+        mus = mus.detach().cpu().numpy()
+        qs = qs.detach().cpu().numpy()
+        prob = qs / qs.sum()
+        discrete_action_idx = np.argmax(qs)
+        cont_action = mus[discrete_action_idx]
+        action = np.concatenate(([discrete_action_idx], cont_action))
+        return action, prob
 
-    def get_pick_probs(self, state, training):
-        """ Return probability distribution based on current state.
-
-        Inputs:
-        state - observable state
-        training - boolean if training or evaluating
-
-        Outputs:
-        action - action to perform
-        probs - probability of each_action
+    def get_q_values(self, state, discrete_action, cont_action):
         """
-        logits = self.pick_net.forward(torch.tensor(state, dtype=torch.float32))
-        probs = torch.softmax(logits,-1)
-        if not training:
-            probs = probs.detach()
-        return probs
-
-    def update(self, states, cost, probs):
-        """ Update policy and value functions based on a set of observations.
-
-        minq Eq[cθ(τ)] − H(τ)
-
-        Inputs:
-        states - sequence of observed states
-        rewards - sequence of rewards from the performed actions
+        Return the Q-value for each discrete action.
+        Parameters
+        ----------
+        state : 1-D or 2-D array-like
+            The observed state.
+        discrete_action : int or 1-D array-like
+            The discrete part of the action.
+        cont_action : 1-D or 2-D array-like
+            The continuous part of the action.
+        Returns
+        -------
         """
-        cost = np.array(cost)
-        mean = cost.mean(axis=1)
-        mean = mean.reshape((-1, 1))
-        cost = cost - mean
-        print(cost.mean(axis=0))
-        for i in range(1):
-            probs = self.get_probs(states[:,:14], True)
-            log_probs = torch.log(probs+1e-7)
-            print("dir")
-            print(cost)
-            print(probs)
-            costs = torch.tensor(cost,dtype=torch.float32)        
-            costs = torch.mean(probs * costs, dim=-1)
-            entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
-            self.cost.append(torch.mean(costs).item())
-            self.entropy.append(-torch.mean(entropy).item())
-            loss = torch.mean(costs - entropy)
-            self.loss.append(loss.item())            
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        if not isinstance(state, torch.Tensor):
+            state = torch.Tensor(state)
+        if state.device != self.device:
+            state = state.to(self.device)
 
-    def update_pick(self, states, cost):
-        """ Update policy and value functions based on a set of observations.
+        # if not isinstance(discrete_action, torch.Tensor):
+            # discrete_action = torch.Tensor(discrete_action)
+        # if discrete_action.device != self.device:
+            # discrete_action = discrete_action.to(self.device)
 
-        minq Eq[cθ(τ)] − H(τ)
+        if not isinstance(cont_action, torch.Tensor):
+            cont_action = torch.Tensor(cont_action)
+        if cont_action.device != self.device:
+            cont_action = cont_action.to(self.device)
 
-        Inputs:
-        states - sequence of observed states
-        rewards - sequence of rewards from the performed actions
+        output = self.net.forward(state)
+        Ls, mus, qs = self.reformat_output(output)
+        L = Ls[discrete_action]
+        mu = mus[discrete_action]
+        q = qs[discrete_action]
+
+        return q - 0.5 * (cont_action - mu) @ L @ L.T @ (cont_action - mu)
+
+    def update(self, states, actions, costs):
+        """
+        Update the Q-value estimation from on one step.
+        Parameters
+        ----------
+        states : 2-D array-like
+            The observed states.
+        actions : 2-D array-like
+            The actions. The first column are the discrete action indices,
+            and the rest are continuous action.
+        costs : 1-D array-like
+            As reward
         """
 
-        cost = np.array(cost)
-        mean = cost.mean(axis=1)
-        mean = mean.reshape((-1, 1))
-        cost = cost - mean
-        for i in range(1):
-            probs = self.get_pick_probs(states[:,:12], True)
-            log_probs = torch.log(probs+1e-7)
-            print("seg")
-            print(cost)
-            print(probs)
-            costs = torch.tensor(cost,dtype=torch.float32)        
-            costs = torch.mean(probs * costs, dim=-1)
-            entropy = -torch.mean(torch.mul(probs, log_probs), dim=-1)
-            self.pick_cost.append(torch.mean(costs).item())
-            self.pick_entropy.append(-torch.mean(entropy).item())
-            loss = torch.mean(costs - entropy)
-            self.pick_loss.append(loss.item())
-            self.pick_optimizer.zero_grad()
-            loss.backward()
-            self.pick_optimizer.step()
+        discrete_actions = actions[:, 0]
+        cont_actions = actions[:, 1:]
+        n_states = states.shape[0]
+        targets = torch.zeros(n_states)
+        q = torch.zeros(n_states)
+        c = torch.zeros(n_states)
+        costs = torch.tensor(costs, dtype=torch.float32)
+        for i in range(n_states):
+            q[i] = self.get_q_values(states[i], int(discrete_actions[i]), cont_actions[i])
+            c[i] = -costs[i]  # Cost is negative reward
+        for i in range(n_states - 1):
+            targets[i] = q[i + 1]
+        targets[n_states - 1] = q[n_states - 1]  # Suppose q isn't change for last state
+        targets = targets + c  # Gamma = 1
+        mse = nn.MSELoss()
+        loss = mse(q, targets)
+        self.cum_loss.append(loss.item())
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
     def pretrain(self, states, truth):
         """ Pre-train the agent in a supervised learning fashion.
 
         Supervised training will not
         """
-        tstates = torch.tensor(states, dtype=torch.float32)
-        truth = torch.tensor(truth, dtype=torch.float32)
-        mse_loss = torch.nn.MSELoss()
-        probs = self.get_probs(tstates, True)
-        loss = mse_loss(probs, truth)
+        raise NotImplemented
+        # states = torch.tensor(states, dtype=torch.float32)
+        # truth = torch.tensor(truth, dtype=torch.float32)
+        # mse_loss = torch.nn.MSELoss()
+        # probs = self.get_probs(states, True)
+        # loss = mse_loss(probs, truth)
+        #
+        # self.optimizer.zero_grad()
+        # loss.backward()
+        # self.optimizer.step()
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-#        print(loss)
-
-    def pretrain_pick(self, states, truth):
-        """ Pre-train the agent in a supervised learning fashion.
-
-        Supervised training will not
-        """
-        tstates = torch.tensor(states[:,:12], dtype=torch.float32)
-        truth = torch.tensor(states[:,12:14], dtype=torch.float32)
-        mse_loss = torch.nn.MSELoss()
-        probs = self.get_pick_probs(tstates, True)
-        loss = mse_loss(probs, truth)
-        
-        self.pick_optimizer.zero_grad()
-        loss.backward()
-        self.pick_optimizer.step()
-#        print(loss)
-
-    def generate_samples(self, env, max_states, max_states_per_trajectory, cost):
-        """ Generate a set of sample trajectories from the enviroment.
+    def generate_samples(self, env, max_states, max_states_per_trajectory):
+        """ Generate a set of sample trajectories from the environment.
 
         Inputs:
         env - ControlEnv type
         max_states - number of total states to visit
-        max_states_per_trajectory - max timesteps for a single rollout
+        max_states_per_trajectory - max time steps for a single rollout
 
         Outputs:
         batch - batch containing the rewards, states, and actions
         """
-        states, actions, probs, pick_probs = [], [], [], []
+        states, actions, probs = [], [], []
         states_visited = 0
-        seg_costs = []
         while states_visited < max_states:
-            state = env.reset()
-            # seg = np.random.randint(16,24)
-            seg, scost, p = self.get_e_greedy_seg(cost, state)
-            seg += 12
-            state[seg] = 1
+            env.reset()
+            state = env.get_rope_states()
             cum_prob = 1
-            action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
-#            print(f"seg{seg} action{action}")
+            action, prob = self.get_random_action(torch.tensor(state, dtype=torch.float32))
+            # action = int(action[0])
             for i in range(max_states_per_trajectory):
                 states.append(state)
                 actions.append(action)
-                cum_prob = prob.numpy()[action]
+                cum_prob = prob[int(action[0])]
                 probs.append(cum_prob)
-                pick_probs.append(p)
-                seg_costs.append(scost)
                 states_visited += 1
-                state, reward, done = env.step((seg - 12)*3, action)
-                # seg = np.random.randint(16,24)
-                seg, scost, p = self.get_e_greedy_seg(cost, state)
-                seg += 12
-                state[seg] = 1
-                env.render()
-                action, prob = self.get_random_action(torch.tensor(state,dtype=torch.float32))
-#                print(f"seg{seg} action{action}")
+                state, reward, done = env.step(int(action[0]), action[1:3])
+                action, prob = self.get_random_action(torch.tensor(state, dtype=torch.float32))
+                # action = int(action[0])
                 if done:
                     break
+        return Batch(states=states, actions=actions, probs=probs)
 
-        utils.transform_action(actions, states, probs)
-        return Batch(states=states, actions=actions, probs=probs, pick_probs=pick_probs * 16), seg_costs * 16
+    def test(self, env, num_test):
+        """ Run a test of the model on the environment.
 
-    def get_random_pick(self,state):
-        probs = self.get_pick_probs(state[:12], False).numpy()
-        seg = np.random.choice(2, p = probs)
-        return seg, probs[seg]
-
-    def get_e_greedy_seg(self, cost, state):
-#        if np.random.randint(0, 10) > 9:
-#            return np.random.randint(0,4)
-        seg_costs = []
-        for i in range(2):
-            state_list = state.tolist()
-            state_list[i+12] = 1
-            costs = cost.get_pick_cost(torch.tensor(state_list, dtype=torch.float32)).detach()
-            seg_costs.append(costs.item())
-        seg, probs = self.get_random_pick(state)
-        return seg, seg_costs, probs
+        Use the on-policy actions.
+        """
+        for t in range(num_test):
+            steps = 0
+            done = False
+            env.reset()
+            state = env.get_rope_states()
+            while not done:
+                steps += 1
+                action, prob = self.get_policy_action(torch.tensor(state, dtype=torch.float32))
+                state, _, done = env.step(int(action[0]), action[1:3])
+            print(f"Test number {t}: {steps} steps reached")
 
     def forward(self, x):
         """ Run data through the network. """
@@ -250,11 +292,5 @@ class Agent():
         """ Save the model. """
         torch.save(self.net.state_dict(), path)
 
-    def save_pick(self,path):
-        torch.save(self.pick_net.state_dict(), path)
-
     def load(self, path):
         self.net.load_state_dict(torch.load(path))
-
-    def load_pick(self, path):
-        self.pick_net.load_state_dict(torch.load(path))

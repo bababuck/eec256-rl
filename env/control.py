@@ -56,8 +56,8 @@ class ControlEnv():
     def do_actions(self, seg, action, reset=False):
 
         # First move to picked location
-        if seg == 1:
-            seg = 2
+        if seg == 1:  # One hot
+            seg = 7
         elif seg == 2:
             seg = 4
         elif seg == 3:
@@ -72,16 +72,8 @@ class ControlEnv():
         # Then lower
         self.env.step(np.array([0, 0, -0.75, 0]))
         # Then move
-        dx = 0
-        dy = 0
-        if action == 0:
-            dx = 1
-        if action == 1:
-            dx = -1
-        if action == 2:
-            dy = 1
-        if action == 3:
-            dy = -1
+        dx = action[0]
+        dy = action[1]
         dx = dx/20
         dy = dy/20
         for i in range(20):
@@ -109,11 +101,11 @@ class ControlEnv():
 
     def get_rope_states(self):
         state = []
-        for i in [0,2,3,4,5,7]:
+        for i in [0, 2, 3, 4, 5, 7]:
             x, y, _ = self.env.get_rope_pos(i)
             state.append(x)
             state.append(y)
-        state = state + 2*[0]
+        state = state
 #        for i in [4,5,6,7]:
 #            state[i] = 0
         return np.array(state)
@@ -156,8 +148,17 @@ class ControlEnv():
 
         if self.random_agent is not None:
             setup = setups[np.random.randint(0,15)]
-            for i in range(0,np.random.randint(0,len(setup)),2):
-                self.do_actions(setup[i], setup[i+1], True)
+            for i in range(0, np.random.randint(0, len(setup)), 2):
+                directions = [0, 0]
+                if setup[i + 1] == 0:
+                    directions = [1, 0]
+                elif setup[i + 1] == 1:
+                    directions = [-1, 0]
+                elif setup[i + 1] == 2:
+                    directions = [0, 1]
+                elif setup[i + 1] == 3:
+                    directions = [0, -1]
+                self.do_actions(setup[i], directions, True)
 
         state = self.get_rope_states()
         normalize_states(state)

@@ -22,54 +22,56 @@ class Trainer():
         # Initialize q_k(τ) as either a random initial controller or from demonstrations
         d_demo = expert_data
         d_samp = Batch()
-        for i in range(200):
-            d_s_demo = d_demo.sample(20)
-            self.agent.pretrain_pick(d_s_demo.states[:,:14], d_s_demo.states[:,14:18])
-            self.agent.pretrain(d_s_demo.states[:,:14], d_s_demo.states[:,14:18])
+        new_d_demo_states = np.zeros((len(d_demo.states), 14))
+        new_d_demo_states[:, :12] = d_demo.states
+        for j in range(len(d_demo.states)):
+            # action_state = np.array([0, 0])
+            if d_demo.actions[j][0] == 0:
+                new_d_demo_states[j][12] = 1
+                new_d_demo_states[j][13] = 0
+            else:
+                new_d_demo_states[j][12] = 0
+                new_d_demo_states[j][13] = 1
+        d_demo.states = new_d_demo_states
         # for iteration i = 1 to I:
         for i in range(iterations):
-            max_states = 35
-            max_states_per_traj = 35
+            max_states = 20  # 35
+            max_states_per_traj = 20
 
             print(f"Iteration={i}")
 
             # Generate samples Dtraj from qk(τ )
-            d_traj, seg_costs = self.agent.generate_samples(self.env, max_states, max_states_per_traj, self.cost)
+            d_traj = self.agent.generate_samples(self.env, max_states, max_states_per_traj)
+
+            # Add action to state
+            new_d_traj_states = np.zeros((len(d_traj.states), 14))
+            new_d_traj_states[:, :12] = d_traj.states
+            for j in range(len(d_traj.states)):
+                # action_state = np.array([0, 0])
+                if d_traj.actions[j][0] == 0:
+                    new_d_traj_states[j][12] = 1
+                    new_d_traj_states[j][13] = 0
+                else:
+                    new_d_traj_states[j][12] = 0
+                    new_d_traj_states[j][13] = 1
+            d_traj.states = new_d_traj_states
 
             # Append samples: Dsamp ← Dsamp ∪ Dtraj
             d_samp.extend(d_traj)
+
             # Use Dsamp to update cost cθ using Algorithm 2
             self.cost.non_linear_ioc(d_demo, d_samp, i, self.agent)
-
-            self.agent.update_pick(d_traj.states, seg_costs)
-            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:14].tolist()+a, dtype=torch.float32)).detach().item() for a in [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]] for s in range(np.shape(d_traj.states)[0])]
-
+            # Only add discrete, treat the continuous as we always get mean
+            # Not sure about add a [0,1], [1,0]
+            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:14].tolist(), dtype=torch.float32)).detach().item()] for s in range(np.shape(d_traj.states)[0])]
+            print("\n Costs: ", costs)
             # Update qk(τ ) using Dtraj and the method from (Levine & Abbeel, 2014) to obtain qk+1(τ )
-            states = torch.tensor(d_traj.states, dtype=torch.float32)
-            self.agent.update(torch.tensor(d_traj.states, dtype=torch.float32), costs, None)
+            states = torch.tensor(d_traj.states[:, :12], dtype=torch.float32)
+            self.agent.update(states, d_traj.actions, costs)
             if i % 20 == 0:
                 self.save_networks('networks', agent_net_name=f"agent_big_it_{i}.pt")
 
-            """
-            if i == 100:
-                for j in range(20):
-                    print("STATE")
-                    print(d_demo.states[j])
-                    for a in [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]:
-                        for b in [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]:
-                            state = torch.tensor(d_demo.states[j][:8].tolist()+a+b, dtype=torch.float32)
-                            print(state)
-                            print(self.cost.get_cost(state).detach().item())
-                            """
         # return optimized cost parameters θ and trajectory distribution q(τ)
-        print(self.cost.pick_ioc_lik)
-        print(self.cost.ioc_lik)
-        print(self.agent.pick_loss)
-        print(self.agent.loss)
-        print(self.agent.pick_cost)
-        print(self.agent.pick_entropy)
-        print(self.agent.cost)
-        print(self.agent.entropy)
 
     def save_networks(self, save_folder, cost_net_name="cost.pt", agent_net_name="agent.pt"):
         """ Save the networks for cost and agent to specified path.
@@ -81,7 +83,6 @@ class Trainer():
         """
         self.cost.save(save_folder + "/" + cost_net_name)
         self.agent.save(save_folder + "/" + agent_net_name)
-        self.agent.save_pick(save_folder + "/pick" + agent_net_name)
 
     def load_networks(self, save_folder, cost_net_name="cost.pt", agent_net_name="agent.pt"):
         """ Save the networks for cost and agent to specified path.
@@ -92,4 +93,3 @@ class Trainer():
         agent_net_name - name of file to save agent=t network to
         """
         self.agent.load(save_folder + "/" + agent_net_name)
-        self.agent.load_pick(save_folder + "/pick" + agent_net_name)

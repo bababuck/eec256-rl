@@ -9,26 +9,25 @@ import numpy as np
 if __name__ == '__main__':
     # For demo of our policy
     # """
-    action_size = 4
-    state_size = 14
+    action_size = 3
+    discrete_action_size = 2
+    cont_action_size = 2
+    state_size = 12
+    hidden_layers = [24, 24, 24]
     agent_hidden_layer_size = 24
     agent_hidden_layers = 3
-    agent = Agent(action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
-    agent.load_pick("networks/pickagent_big_it_400.pt")
-    agent.load("networks/agent_big_it_400.pt")
+    agent = Agent(discrete_action_size, cont_action_size, state_size, hidden_layers)
+    agent.load("networks/agent_big_it_20.pt")
     env = ControlEnv(True, 0.02)
     np.random.seed(1000)
     ob = env.reset()
     env.render()
     time.sleep(1)
     for i in range(100):
-        segment = argmax(agent.get_pick_probs(ob[:12], False).numpy())
-        print(segment)
-        ob[12+segment] = 1
-        direction, probs = agent.get_policy_action(torch.tensor(ob, dtype=torch.float32))
-        print(direction)
+        action, probs = agent.get_policy_action(torch.tensor(ob, dtype=torch.float32))
+        print(action)
         print(probs)
-        ob, _, _ = env.step(3*segment, direction)
+        ob, _, _ = env.step(int(action[0]), action[1: 3])
         env.render()
     """
     # For demo of expert
