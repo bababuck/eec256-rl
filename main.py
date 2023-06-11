@@ -1,6 +1,6 @@
-from agents.trainer import Trainer
-from agents.agent import Agent
-from agents.cost import Cost
+from discrete_agents.trainer import Trainer as DiscreteTrainer
+from discrete_agents.agent import Agent as DiscreteAgent
+from discrete_agents.cost import Cost as DiscreteCost
 from env.control import ControlEnv
 from utils.batch import Batch
 from utils.utils import normalize_states
@@ -29,9 +29,9 @@ if __name__ == '__main__':
     agent_hidden_layers = 3
     cost_hidden_layer_size = 24
     cost_hidden_layers = 3
-    agent = Agent(dir_action_size, seg_action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
-    cost = Cost(dir_action_size, state_size, cost_hidden_layer_size, cost_hidden_layers)
+    agent = DiscreteAgent(dir_action_size, seg_action_size, state_size, agent_hidden_layer_size, agent_hidden_layers)
+    cost = DiscreteCost(dir_action_size, state_size, cost_hidden_layer_size, cost_hidden_layers)
     env = ControlEnv(True)
-    trainer = Trainer(env, agent, cost)
+    trainer = DiscreteTrainer(env, agent, cost)
     iterations = 801
     trainer.train(iterations, expert_data)
