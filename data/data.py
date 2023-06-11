@@ -35,12 +35,15 @@ ax.legend()
 plt.show()
 plt.savefig("ioc_loss.png")
 
+pol_loss = [0] * len(entropy)
 for i in range(len(entropy)):
     entropy[i] += .345
+    pol_loss[i] = cost[i] - entropy[i]
 
 fig, ax = plt.subplots()
 ax.plot(iterations, entropy, label="Entropy")
 ax.plot(iterations, cost, label="Cost")
+ax.plot(iterations, pol_loss, label="Total Loss")
 #ax.set_xticks(np.array(list(range(0, sizesl, 2))) + 0.5, sizesn)
 ax.set_title('Loss of Policy Function Over Time')
 ax.set_xlabel('Iterations')
