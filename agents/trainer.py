@@ -63,7 +63,7 @@ class Trainer():
             self.cost.non_linear_ioc(d_demo, d_samp, i, self.agent)
             # Only add discrete, treat the continuous as we always get mean
             # Not sure about add a [0,1], [1,0]
-            costs = [[self.cost.get_cost(torch.tensor(d_traj.states[s][:14].tolist(), dtype=torch.float32)).detach().item()] for s in range(np.shape(d_traj.states)[0])]
+            costs = [[self.cost.get_cost(torch.cat((torch.tensor(d_traj.states[s][:14], dtype=torch.float32), torch.tensor(d_traj.actions[s][1:3], dtype=torch.float32)), 0)).detach().item()] for s in range(np.shape(d_traj.states)[0])]
             print("\n Costs: ", costs)
             # Update qk(τ ) using Dtraj and the method from (Levine & Abbeel, 2014) to obtain qk+1(τ )
             states = torch.tensor(d_traj.states[:, :12], dtype=torch.float32)

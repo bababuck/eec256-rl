@@ -212,7 +212,6 @@ class Agent:
         c = torch.zeros(n_states)
 
         costs = torch.tensor(costs, dtype=torch.float32)
-        print("\n Costs: ", costs)
         for i in range(n_states):
             q[i] = self.get_q_values(states[i], int(discrete_actions[i]), cont_actions[i]) * 100
             c[i] = -costs[i]  # Cost is negative reward

@@ -9,7 +9,7 @@ class Cost():
 
     def __init__(self, action_size, state_size, hidden_layer_size, hidden_layers):
         """ Initialize the network and optimizer. """
-        self.action_size = 2  # 2 segments to pick
+        self.action_size = 4  # 2 segments to pick + 2 continuous
         self.net = utils.generate_simple_network(state_size + self.action_size, 1, hidden_layer_size, hidden_layers)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.0025)
         self.ioc_lik = []
@@ -20,7 +20,6 @@ class Cost():
         Algorithm 2 from paper.
         """
         cum_ioc_like = 0
-        cum_pick_ioc_like = 0
         for iter in range(self.K):
             # Sample demonstration batch Dˆdemo ⊂ Ddemo
             d_s_demo = d_demo.sample(20)
@@ -32,12 +31,11 @@ class Cost():
             # Estimate dLIOC dθ (θ) using Dˆdemo and Dˆsamp
             samp_probs = d_s_samp.probs
             samp_probs_t = torch.tensor(samp_probs, dtype=torch.float32)
-            print(" \n samp_prob: ", samp_probs_t)
             # z = [1/k * Sigma_k(qκ(τ))]^-1
             # L_ioc = 1/N * Sigma_demo(cost(τ)) + log( 1/M * Sigma_samp(z * exp(-cost(τ)) ) )
             #if iter % 5 == 0:
-            samp_costs = self.get_cost(torch.tensor(d_s_samp.states, dtype=torch.float32))
-            demo_costs = self.get_cost(torch.tensor(d_s_demo.states, dtype=torch.float32))
+            samp_costs = self.get_cost(torch.cat((torch.tensor(d_s_samp.states, dtype=torch.float32), torch.tensor(d_s_samp.actions[:, 1:3], dtype=torch.float32)), 1))
+            demo_costs = self.get_cost(torch.cat((torch.tensor(d_s_demo.states, dtype=torch.float32), torch.tensor(d_s_demo.actions[:, 1:3], dtype=torch.float32)), 1))
             ioc_lik = torch.mean( demo_costs ) + torch.log( torch.mean( torch.exp( -samp_costs ) / (samp_probs_t + 1e-7)) )
             print(" \n IOC: ", ioc_lik)
             # Update parameters θ using gradient dLIOC dθ (θ)
