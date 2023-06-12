@@ -56,8 +56,8 @@ class Trainer():
             self.agent.update(torch.tensor(d_traj.states, dtype=torch.float32), costs, None)
 
             # Logging
-            if i % 20 == 0:
-                self.save_networks('networks', agent_net_name=f"agent_big_it_{i}.pt")
+#            if i % 20 == 0:
+#                self.save_networks('networks', agent_net_name=f"agent_big_it_{i}.pt")
 
         # return optimized cost parameters θ and trajectory distribution q(τ)
 
