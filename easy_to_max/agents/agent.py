@@ -69,6 +69,8 @@ class Agent:
         action : 1-D ndarray
             The random action. The first dimension is the discrete action index, and the
             rest are continuous action
+        prob : 1-D ndarray
+            The probabilities of taking the each discrete acrion.
         """
 
         output = self.net(_state)
@@ -133,6 +135,8 @@ class Agent:
         action : 1-D ndarray
             The policy's best action. The first dimension is the discrete action index,
             and the rest are continuous action.
+        prob : 1-D ndarray
+            The probability of taking each discrete action.
         """
         if not isinstance(state, torch.Tensor):
             state = torch.Tensor(state)
