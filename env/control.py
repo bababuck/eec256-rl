@@ -92,10 +92,10 @@ class ControlEnv():
             if state[i] < 0.4 or state[i] > 1.1:
                 done = True
         for i in range(0,12,2):#[0,2,8,10]:#range(0,12,2):
-            if state[i] < 1.05  or state[i] > 1.47:
+            if state[i] < 1.05  or state[i] > 1.5:
                 done = True
 
-        normalize_states(state)
+        # normalize_states(state)
 
         return state, 0, done
 

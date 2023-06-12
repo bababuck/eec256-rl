@@ -17,18 +17,21 @@ if __name__ == '__main__':
     agent_hidden_layer_size = 24
     agent_hidden_layers = 3
     agent = Agent(discrete_action_size, cont_action_size, state_size, hidden_layers)
-    agent.load("networks/agent_big_it_20.pt")
-    env = ControlEnv(True, 0.02)
-    np.random.seed(1000)
+    agent.load("networks/agent_last_800.pt")
+    env = ControlEnv(False, 0.02)  # 0.02
+    np.random.seed(10)
     ob = env.reset()
     env.render()
-    time.sleep(1)
+    # time.sleep(1)
     for i in range(100):
+        print(f"Iteration={i}")
         action, probs = agent.get_policy_action(torch.tensor(ob, dtype=torch.float32))
         print(action)
-        print(probs)
-        ob, _, _ = env.step(int(action[0]), action[1: 3])
-        env.render()
+        ob, _, done = env.step(int(action[0]), action[1: 3])
+        print(" \n States: ", ob)
+        if done:
+            print("\n Done")
+            break
     """
     # For demo of expert
     setup = [3, 3, 3, 1, 3, 1, 2, 0, 3, 1, 2, 0, 0, 0, 1, 2, 3, 3, 3, 0]
