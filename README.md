@@ -31,3 +31,7 @@ For the discrete action space implementation, the folder `easy_to_max/agents` co
  - `agent.py` contains the trajectory distribution (policy) networks. The implemenation of the loss function for updating these networks. Also contains implementation for generating rollouts.
  - `cost.py` contains the cost networks used. Includes implementation of Algorithm 2 from Finn et al. 2016, for updating the cost network via non-linear IOC
  - `trainer.py` contains the main training loop. It implements most of Algorithm 1 calling on Agent() and Cost() as needed
+ 
+ ### Running Time
+ For training 800 iterations of one implementation, it takes almost 6 hours.
+ 
