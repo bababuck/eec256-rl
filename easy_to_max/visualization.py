@@ -17,7 +17,7 @@ if __name__ == '__main__':
     agent_hidden_layer_size = 24
     agent_hidden_layers = 3
     agent = Agent(discrete_action_size, cont_action_size, state_size, hidden_layers)
-    agent.load("networks/agent_big_it_800.pt")
+    agent.load("networks/agent_last_800.pt")
     env = ControlEnv(True, 0.02)
     np.random.seed(1000)
     ob = env.reset()
